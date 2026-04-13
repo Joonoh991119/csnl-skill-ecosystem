@@ -1,0 +1,23 @@
+{
+  "skill_name": "rag-pipeline",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I have about 50 neuroscience papers in my Zotero library about visual working memory and attention. I want to build a search system so I can ask questions like 'what papers discuss the relationship between VWM capacity and attention control' and get relevant passages back. Can you set up the RAG pipeline for me? I'm on a Mac Mini M4 Pro with 64GB RAM and have PostgreSQL installed.",
+      "expected_output": "Complete Python script that: (1) sets up pgvector schema, (2) shows how to ingest PDFs from Zotero, (3) chunks with section-awareness, (4) embeds with sentence-transformers or Ollama, (5) creates HNSW index, (6) provides a search function. Should be runnable end-to-end.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "My RAG pipeline is returning irrelevant results. When I search for 'orientation tuning in V1' it gives me papers about working memory instead. The vector DB is PostgreSQL with pgvector and I'm using nomic-embed-text via Ollama for embeddings. What should I check and how can I improve retrieval quality?",
+      "expected_output": "Diagnostic checklist: (1) verify embedding quality, (2) check chunking strategy, (3) suggest hybrid search (dense + BM25), (4) recommend re-ranking, (5) provide concrete code to implement fixes. Should address the specific problem pattern (cross-domain confusion).",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "I need to add 10 new papers from my Zotero collection about Bayesian observer models to my existing RAG index. The papers are already in Zotero with the tag 'bayesian-observer'. Show me how to incrementally add them without re-indexing everything.",
+      "expected_output": "Script that: (1) queries Zotero MCP for tagged items, (2) extracts PDF content, (3) chunks new papers only, (4) embeds and inserts into existing pgvector table, (5) handles duplicates. Should use Zotero MCP integration and pgvector upsert pattern.",
+      "files": []
+    }
+  ]
+}

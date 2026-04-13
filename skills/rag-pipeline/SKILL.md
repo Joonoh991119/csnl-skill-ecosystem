@@ -449,6 +449,52 @@ cur.execute("SELECT extversion FROM pg_extension WHERE extname = 'vector'")
 print(f"pgvector version: {cur.fetchone()[0]}")  # Should print 0.7.x or later
 ```
 
+## CRMB_tutor Compatibility
+
+This skill is designed to integrate with the existing CRMB_tutor pipeline
+(https://github.com/Joonoh991119/CRMB_tutor). Key compatibility notes:
+
+### LanceDB → pgvector Migration
+CRMB_tutor currently uses LanceDB with BGE-M3 (1024d). To migrate:
+
+```python
+import lancedb
+import numpy as np
+import psycopg2
+from pgvector.psycopg2 import register_vector
+
+def migrate_lancedb_to_pgvector(lance_path: str, pg_conn_string: str):
+    """Migrate existing LanceDB vectors to pgvector."""
+    # Read from LanceDB
+    db = lancedb.connect(lance_path)
+    table = db.open_table("chunks")  # adjust table name
+    df = table.to_pandas()
+    
+    # Write to pgvector
+    conn = psycopg2.connect(pg_conn_string)
+    register_vector(conn)
+    cur = conn.cursor()
+    
+    for _, row in df.iterrows():
+        cur.execute("""
+            INSERT INTO paper_chunks (paper_id, chunk_text, section, embedding)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT DO NOTHING
+        """, (row.get('doc_id', ''), row['text'], row.get('section', ''), 
+              np.array(row['vector'])))
+    conn.commit()
+    print(f"Migrated {len(df)} chunks from LanceDB to pgvector")
+```
+
+### Embedding Dimension
+CRMB uses BGE-M3 at 1024 dimensions. Set `embedding vector(1024)` in the schema
+(not 1536 like OpenAI). The skill's schema template uses 1024 by default.
+
+### Existing Chunker Compatibility
+CRMB's `chunker_v2.py` already handles Marker-parsed markdown. The skill's
+section-aware chunking complements this by adding academic paper section detection
+on top of the existing chunk boundaries.
+
 ## Integration Points
 
 - **Zotero MCP**: Use `search_library` → `get_content` for document ingestion
@@ -456,3 +502,4 @@ print(f"pgvector version: {cur.fetchone()[0]}")  # Should print 0.7.x or later
 - **sci-viz skill**: Visualize retrieval metrics (precision@k, recall curves)
 - **eval-runner skill**: Benchmark retrieval quality on test queries
 - **tutor-content-gen skill**: Consumes retrieved context to generate educational content
+- **CRMB_tutor**: Direct integration with existing parsing pipeline + LanceDB migration
