@@ -265,6 +265,52 @@ Before outputting any content, verify:
 4. **No hallucination**: Cross-check claims against provided source material
 5. **Pedagogical value**: Content teaches, not just informs
 
+### Quality Checklist (Concrete Verification Steps)
+
+Run this checklist before finalizing ANY generated content:
+
+```python
+def verify_content_quality(content: dict, source_docs: list) -> dict:
+    """Concrete quality gate — returns pass/fail with reasons."""
+    issues = []
+    
+    # 1. Source grounding: every [Author, Year] must exist in source_docs
+    citations = re.findall(r'\[([A-Z][a-z]+(?:\s+(?:&|and)\s+[A-Z][a-z]+)?,\s*\d{4})\]', content['text'])
+    known_refs = {f"{d['authors']}, {d['year']}" for d in source_docs}
+    for cite in citations:
+        if cite not in known_refs:
+            issues.append(f"UNGROUNDED CITATION: [{cite}] not in source docs")
+    
+    # 2. Difficulty calibration check
+    from textstat import flesch_kincaid_grade
+    grade = flesch_kincaid_grade(content['text_en'])
+    expected = {'undergraduate': (10, 14), 'master': (14, 18), 'phd': (16, 22)}
+    low, high = expected.get(content['difficulty'], (10, 22))
+    if grade < low or grade > high:
+        issues.append(f"DIFFICULTY MISMATCH: Grade {grade:.1f}, expected {low}-{high} for {content['difficulty']}")
+    
+    # 3. Bilingual term consistency
+    for en_term, ko_term in TERM_GLOSSARY.items():
+        if en_term.lower() in content['text_en'].lower():
+            if ko_term not in content['text_ko']:
+                issues.append(f"TERM INCONSISTENCY: '{en_term}' in EN but '{ko_term}' missing in KO")
+    
+    # 4. Retrieval failure guard
+    if len(source_docs) < 3:
+        issues.append("INSUFFICIENT SOURCES: <3 source docs. Halt and request more papers.")
+    
+    return {
+        'pass': len(issues) == 0,
+        'issues': issues,
+        'citation_count': len(citations),
+        'readability_grade': grade if 'grade' in dir() else None
+    }
+```
+
+**If retrieval returns fewer than 3 relevant chunks**: HALT content generation. 
+Ask the user to add more papers to the knowledge base rather than generating 
+ungrounded content. Never fabricate to fill gaps.
+
 ## Integration Points
 
 - **paper-processor**: Provides structured paper data as input

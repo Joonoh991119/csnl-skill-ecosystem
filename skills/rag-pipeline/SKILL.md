@@ -214,7 +214,11 @@ import psycopg2
 from pgvector.psycopg2 import register_vector
 import numpy as np
 
-def setup_pgvector(conn_string: str = "postgresql://localhost:5432/csnl_rag"):
+# Configuration — adjust embedding dimension to match your model
+EMBEDDING_DIM = 1024  # BGE-M3: 1024, OpenAI text-embedding-3-large: 3072, Voyage-3: 1024
+# Auto-detect: EMBEDDING_DIM = model.get_sentence_embedding_dimension()
+
+def setup_pgvector(conn_string: str = "postgresql://localhost:5432/csnl_rag", embedding_dim: int = EMBEDDING_DIM):
     """Initialize PostgreSQL with pgvector extension."""
     conn = psycopg2.connect(conn_string)
     register_vector(conn)
@@ -224,7 +228,7 @@ def setup_pgvector(conn_string: str = "postgresql://localhost:5432/csnl_rag"):
     cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
     
     # Create chunks table with vector column
-    cur.execute("""
+    cur.execute(f"""
         CREATE TABLE IF NOT EXISTS paper_chunks (
             id SERIAL PRIMARY KEY,
             paper_id TEXT NOT NULL,
@@ -234,7 +238,7 @@ def setup_pgvector(conn_string: str = "postgresql://localhost:5432/csnl_rag"):
             section TEXT,          -- 'abstract', 'methods', 'results', etc.
             chunk_text TEXT NOT NULL,
             chunk_index INTEGER,
-            embedding vector(1024),  -- BGE-M3 outputs 1024-dim; adjust for your model
+            embedding vector({embedding_dim}),  -- Parameterized: set EMBEDDING_DIM at top
             created_at TIMESTAMP DEFAULT NOW(),
             
             -- Metadata for filtering
