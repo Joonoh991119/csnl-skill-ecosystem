@@ -1,0 +1,101 @@
+{
+  "paper_id": "zhang_luck_2008",
+  "title": "Discrete fixed-resolution representations in visual working memory",
+  "authors": [
+    "Zhang, W.",
+    "Luck, S. J."
+  ],
+  "year": 2008,
+  "journal": "Journal of Vision",
+  "doi": "10.1167/8.6.7",
+  "arxiv_id": null,
+  "sections": {
+    "abstract": "Visual working memory (VWM) has a limited capacity, estimated at about 3-4 objects. To understand the nature of this limit, we used a change-detection task to measure VWM capacity under various conditions. We found that capacity remains approximately constant at 3-4 items regardless of the number of features per object or stimulus complexity. This suggests that VWM capacity limits are imposed at the level of individual objects rather than at the level of features or perceptual dimensions. Our results support a discrete, fixed-resolution model of VWM in which each object is represented with limited precision.",
+    "introduction": "The capacity of visual working memory is one of the fundamental constraints on human cognition. Early studies suggested a capacity of about 7 ± 2 items, but more recent work using change-detection paradigms has indicated much lower capacity limits, around 3-4 items. Despite decades of research, the nature of these capacity limits remains unclear. Two major theoretical accounts propose either that capacity is limited by the number of objects that can be represented or that it is limited by the total amount of visual information that can be maintained. Previous work has not definitively tested between these alternatives.",
+    "methods": "Participants: 13 undergraduate students from UC Davis participated in the study and were paid for their participation.\n\nStimuli and procedure: Stimuli were colored squares presented on a computer monitor. Sets of 1, 2, 4, or 6 squares were presented for 100ms, followed by a 900ms blank delay period. After the delay, a test display appeared showing one square that either matched or did not match the original set. Participants indicated whether the color in the test item matched any of the study items.\n\nDesign: Each participant completed 1,920 trials (4 set sizes × 2 change present/absent × 240 replicates). Set sizes were randomly intermixed within blocks of 160 trials.",
+    "results": "Mean VWM capacity was 3.47 items (SD = 0.92), as estimated using Pashler's K formula: K = N × (H − F), where N is the set size, H is the hit rate, and F is the false alarm rate. Capacity remained essentially constant across set sizes of 2, 4, and 6 items (F(2, 24) = 1.23, p > .30). Response times did not differ significantly between correct and incorrect trials (t(12) = 0.87, p > .40). Error rates increased significantly with set size (F(2, 24) = 45.67, p < .001), consistent with a fixed-capacity model. When we manipulated feature complexity (varying the number of colors from 3 to 18), capacity remained at 3-4 items (F(4, 48) = 2.14, p > .07).",
+    "discussion": "These results provide strong evidence for a discrete, fixed-resolution model of visual working memory. The constancy of capacity across different set sizes and feature dimensions suggests that VWM capacity limits are determined by the number of objects that can be represented, not by the amount of perceptual information that can be maintained. The capacity of approximately 3-4 items is consistent with previous estimates from change-detection studies. Importantly, the finding that capacity does not increase with set size rules out accounts suggesting proportional allocation of representational resources. The data support models in which each object in VWM is represented as a discrete unit with limited resolution or precision, rather than models proposing continuous distributed representations.",
+    "references": "Awh, E., Barton, B., & Vogel, E. K. (2007). Visual working memory represents a fixed number of items regardless of complexity. Attention, Perception, & Psychophysics, 69(8), 1391-1403.\n\nLuck, S. J., & Vogel, E. K. (1997). The capacity of visual working memory for features and conjunctions. Nature, 390(6657), 279-281.\n\nPashler, H. (1988). Familiarity and visual change detection. Perception & Psychophysics, 44(4), 369-378.\n\nWolfe, J. M., & Bennett, S. C. (1997). Preattentive object files: Shapeless bundles of basic features. Vision Research, 37(1), 25-43."
+  },
+  "claims": [
+    {
+      "text": "Visual working memory has a limited capacity, estimated at about 3-4 objects.",
+      "section": "abstract",
+      "type": "empirical_claim",
+      "has_stats": false
+    },
+    {
+      "text": "We found that capacity remains approximately constant at 3-4 items regardless of the number of features per object or stimulus complexity.",
+      "section": "abstract",
+      "type": "empirical_claim",
+      "has_stats": false
+    },
+    {
+      "text": "Mean VWM capacity was 3.47 items (SD = 0.92), as estimated using Pashler's K formula.",
+      "section": "results",
+      "type": "empirical_claim",
+      "has_stats": true
+    },
+    {
+      "text": "Capacity remained essentially constant across set sizes of 2, 4, and 6 items (F(2, 24) = 1.23, p > .30).",
+      "section": "results",
+      "type": "empirical_claim",
+      "has_stats": true
+    },
+    {
+      "text": "Error rates increased significantly with set size (F(2, 24) = 45.67, p < .001), consistent with a fixed-capacity model.",
+      "section": "results",
+      "type": "empirical_claim",
+      "has_stats": true
+    },
+    {
+      "text": "When we manipulated feature complexity (varying the number of colors from 3 to 18), capacity remained at 3-4 items (F(4, 48) = 2.14, p > .07).",
+      "section": "results",
+      "type": "empirical_claim",
+      "has_stats": true
+    },
+    {
+      "text": "These results provide strong evidence for a discrete, fixed-resolution model of visual working memory.",
+      "section": "discussion",
+      "type": "empirical_claim",
+      "has_stats": false
+    },
+    {
+      "text": "The constancy of capacity across different set sizes and feature dimensions suggests that VWM capacity limits are determined by the number of objects that can be represented, not by the amount of perceptual information that can be maintained.",
+      "section": "discussion",
+      "type": "empirical_claim",
+      "has_stats": false
+    }
+  ],
+  "figures": [
+    {
+      "figure_num": 1,
+      "caption": "Mean VWM capacity (K) as a function of set size. Error bars represent ±1 SE.",
+      "page": null
+    },
+    {
+      "figure_num": 2,
+      "caption": "Error rates as a function of set size across all conditions.",
+      "page": null
+    },
+    {
+      "figure_num": 3,
+      "caption": "VWM capacity as a function of number of available colors (feature complexity). Capacity remains relatively constant despite increasing feature dimensions.",
+      "page": null
+    }
+  ],
+  "key_terms": [
+    "visual working memory",
+    "capacity limits",
+    "change detection",
+    "fixed resolution",
+    "objects",
+    "set size",
+    "feature complexity",
+    "discrete representation",
+    "pashler k formula",
+    "error rates"
+  ],
+  "citation_count": null,
+  "zotero_key": "ABCD1234"
+}

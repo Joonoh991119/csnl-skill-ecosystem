@@ -1,0 +1,173 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Academic Paper Processing Schema",
+  "description": "Structured schema for extracting and organizing data from academic PDF papers",
+  "type": "object",
+  "required": ["file", "metadata", "sections", "claims", "figures", "page_count"],
+  "properties": {
+    "file": {
+      "type": "string",
+      "description": "Path to the source PDF file"
+    },
+    "page_count": {
+      "type": "integer",
+      "description": "Total number of pages in the PDF",
+      "minimum": 1
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extracted paper metadata",
+      "properties": {
+        "title": {
+          "type": ["string", "null"],
+          "description": "Title of the paper"
+        },
+        "authors": {
+          "type": ["string", "null"],
+          "description": "Author name(s)"
+        },
+        "year": {
+          "type": ["integer", "null"],
+          "description": "Publication year",
+          "minimum": 1900,
+          "maximum": 2100
+        },
+        "doi": {
+          "type": ["string", "null"],
+          "description": "Digital Object Identifier"
+        },
+        "abstract": {
+          "type": ["string", "null"],
+          "description": "Paper abstract (first 500 characters)"
+        }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "description": "Main sections of the paper (Introduction, Methods, Results, Discussion, etc.)",
+      "items": {
+        "type": "object",
+        "required": ["title", "level", "content", "start_page"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Section title"
+          },
+          "level": {
+            "type": "integer",
+            "description": "Hierarchy level (1=main section, 2=subsection, etc.)",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "content": {
+            "type": "string",
+            "description": "Text content of the section"
+          },
+          "start_page": {
+            "type": "integer",
+            "description": "Starting page number",
+            "minimum": 1
+          },
+          "end_page": {
+            "type": ["integer", "null"],
+            "description": "Ending page number",
+            "minimum": 1
+          },
+          "subsections": {
+            "type": "array",
+            "description": "Nested subsections",
+            "items": {
+              "$ref": "#/properties/sections/items"
+            }
+          }
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "description": "Key claims with supporting statistical or experimental evidence",
+      "items": {
+        "type": "object",
+        "required": ["text", "evidence_type"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "The main claim statement"
+          },
+          "evidence_type": {
+            "type": "string",
+            "enum": ["statistical", "experimental", "theoretical"],
+            "description": "Type of evidence supporting the claim"
+          },
+          "statistics": {
+            "type": ["object", "null"],
+            "description": "Statistical data (if evidence_type is statistical)",
+            "properties": {
+              "value": {
+                "type": "number",
+                "description": "Numeric value of the statistic"
+              },
+              "statistic": {
+                "type": "string",
+                "description": "Type of statistic (F, t, p, r, χ², etc.)"
+              },
+              "df": {
+                "type": ["string", "number"],
+                "description": "Degrees of freedom (if applicable)"
+              },
+              "n": {
+                "type": ["integer", "null"],
+                "description": "Sample size"
+              },
+              "effect_size": {
+                "type": ["number", "null"],
+                "description": "Effect size (Cohen's d, eta-squared, etc.)"
+              }
+            }
+          },
+          "supporting_text": {
+            "type": ["string", "null"],
+            "description": "Surrounding text providing context (up to 200 chars)"
+          },
+          "page": {
+            "type": ["integer", "null"],
+            "description": "Page number where claim appears",
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "figures": {
+      "type": "array",
+      "description": "Figures, tables, and images in the paper",
+      "items": {
+        "type": "object",
+        "required": ["number", "caption", "type", "page"],
+        "properties": {
+          "number": {
+            "type": "string",
+            "description": "Figure/table number (e.g., '1', '2A', '3B')"
+          },
+          "caption": {
+            "type": "string",
+            "description": "Figure/table caption text (up to 500 chars)"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["figure", "table", "image"],
+            "description": "Type of visual element"
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number where figure appears",
+            "minimum": 1
+          },
+          "description": {
+            "type": ["string", "null"],
+            "description": "Additional description or interpretation of the figure"
+          }
+        }
+      }
+    }
+  }
+}

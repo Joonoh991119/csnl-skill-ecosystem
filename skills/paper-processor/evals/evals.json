@@ -1,0 +1,38 @@
+[
+  {
+    "prompt": "I have a PDF of Zhang & Luck (2008) 'Discrete fixed-resolution representations in visual working memory'. Extract the structured sections, key claims with statistical evidence, and figure captions. Output as structured JSON following the paper-processor schema. The PDF is at ~/Zotero/storage/ABCD1234/zhang_luck_2008.pdf",
+    "expected_output_criteria": [
+      "Section detection: must identify abstract, introduction, methods, results, discussion",
+      "Claim extraction: must find at least 3 claims with statistical evidence (p-values, F-stats, t-stats)",
+      "Figure extraction: must detect Figure 1 and its caption about mixture model fits",
+      "Output schema: must produce valid JSON matching the paper-processor output schema",
+      "Uses PyMuPDF (fitz) for extraction, not raw text only",
+      "Section regex patterns match standard academic paper structure",
+      "Key terms include: visual working memory, mixture model, fixed-resolution, set size"
+    ]
+  },
+  {
+    "prompt": "Process the following 10 papers from my Zotero collection tagged 'VWM-core' in batch mode. For each paper, extract sections, claims, and figures. Save results as individual JSON files in ~/csnl-tutor/processed_papers/. At the end, show me a summary of how many papers processed, how many claims extracted total, and any failures.",
+    "expected_output_criteria": [
+      "Uses Zotero MCP to list items with tag 'VWM-core'",
+      "Iterates through papers with error handling (try/except per paper)",
+      "Produces per-paper JSON files with the paper-processor output schema",
+      "Generates batch summary: processed count, failed count, total claims",
+      "Uses batch_process function pattern from SKILL.md",
+      "Handles missing PDFs gracefully (reports failure, continues)",
+      "Section detection works for each paper independently"
+    ]
+  },
+  {
+    "prompt": "I just downloaded arxiv:2401.07890 about neural population codes and working memory. Parse it, extract all the methods details (what model architecture they used, training procedure, dataset), and extract every figure with its caption. I want the output as a Notion page with the structured summary.",
+    "expected_output_criteria": [
+      "Attempts arXiv-specific extraction (LaTeX source or PDF fallback)",
+      "Methods section extraction is detailed: model architecture, training, data",
+      "All figures detected with captions and page numbers",
+      "Uses Notion MCP to create structured page (not just console output)",
+      "Handles arXiv ID format correctly (2401.07890)",
+      "Preserves equations from methods section where possible",
+      "Output includes metadata: title, authors, year, journal/arxiv"
+    ]
+  }
+]

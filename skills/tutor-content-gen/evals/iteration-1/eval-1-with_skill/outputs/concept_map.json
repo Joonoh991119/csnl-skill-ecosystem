@@ -1,0 +1,271 @@
+{
+  "title": "Visual Working Memory Capacity Models: Slot vs Resource Debate",
+  "description": "Concept map showing the competing theoretical frameworks for explaining VWM capacity limits and their empirical evidence",
+  "nodes": [
+    {
+      "id": "vwm_capacity",
+      "label": "VWM Capacity Limit",
+      "definition": "The maximum number of objects (~3-4) that visual working memory can simultaneously represent",
+      "papers": ["luck_vogel1997", "cowan2001", "zhang_luck2008"],
+      "type": "core_phenomenon",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "id": "slot_model",
+      "label": "Slot Model",
+      "definition": "Discrete storage mechanism with fixed number (~3-4) of independent slots, each holding one complete object with all features",
+      "papers": ["luck_vogel1997"],
+      "type": "theoretical_model",
+      "x": -200,
+      "y": -150
+    },
+    {
+      "id": "resource_model",
+      "label": "Resource Model",
+      "definition": "Flexible allocation of shared representational resources distributed across all items in display; capacity limit from finite resource pool",
+      "papers": ["zhang_luck2008"],
+      "type": "theoretical_model",
+      "x": 200,
+      "y": -150
+    },
+    {
+      "id": "change_detection",
+      "label": "Change Detection Paradigm",
+      "definition": "Experimental method: view array → delay → test array; measure errors and RT to estimate K (capacity)",
+      "papers": ["luck_vogel1997"],
+      "type": "experimental_method",
+      "x": 0,
+      "y": 150
+    },
+    {
+      "id": "set_size_effect",
+      "label": "Set Size Effect",
+      "definition": "Performance plateau when display contains >3-4 items; adding more items doesn't reduce K",
+      "papers": ["luck_vogel1997", "cowan2001"],
+      "type": "empirical_finding",
+      "x": -150,
+      "y": 200
+    },
+    {
+      "id": "precision_tradeoff",
+      "label": "Precision-Load Tradeoff",
+      "definition": "Memory precision for individual items decreases as more items must be stored; evidence for resource allocation",
+      "papers": ["zhang_luck2008"],
+      "type": "empirical_finding",
+      "x": 150,
+      "y": 200
+    },
+    {
+      "id": "all_or_nothing",
+      "label": "All-or-Nothing Storage",
+      "definition": "Items are either fully remembered with all features or completely forgotten; supports slot model predictions",
+      "papers": ["luck_vogel1997"],
+      "type": "empirical_finding",
+      "x": -250,
+      "y": 300
+    },
+    {
+      "id": "flexible_resolution",
+      "label": "Flexible Resolution Storage",
+      "definition": "Items stored with variable precision depending on attentional resources allocated; all items partially stored",
+      "papers": ["zhang_luck2008"],
+      "type": "empirical_finding",
+      "x": 250,
+      "y": 300
+    },
+    {
+      "id": "feature_binding",
+      "label": "Feature Binding Problem",
+      "definition": "How visual features (color, orientation, position) are bound together into unified objects in VWM",
+      "papers": ["luck_vogel1997"],
+      "type": "theoretical_issue",
+      "x": -300,
+      "y": -100
+    },
+    {
+      "id": "attention_mechanism",
+      "label": "Attentional Control",
+      "definition": "Role of attention in determining which items enter VWM and how resources are allocated across items",
+      "papers": ["cowan2001", "zhang_luck2008"],
+      "type": "mechanism",
+      "x": 0,
+      "y": -300
+    },
+    {
+      "id": "cowan_synthesis",
+      "label": "Cowan's Integrated Model",
+      "definition": "Synthesis of slot and resource mechanisms; capacity limit reflects interaction of discrete focusing and flexible allocation",
+      "papers": ["cowan2001"],
+      "type": "theoretical_model",
+      "x": 0,
+      "y": -100
+    },
+    {
+      "id": "iconic_memory",
+      "label": "Iconic Memory Buffer",
+      "definition": "Early visual sensory store with high capacity but short duration (~500ms); feeds into VWM",
+      "papers": ["luck_vogel1997"],
+      "type": "related_system",
+      "x": -150,
+      "y": -250
+    },
+    {
+      "id": "visual_cortex",
+      "label": "Visual Cortex Architecture",
+      "definition": "Neural substrate for VWM; retinotopic maps and feature-selective neurons constrain capacity",
+      "papers": ["cowan2001"],
+      "type": "neural_basis",
+      "x": 150,
+      "y": -250
+    }
+  ],
+  "edges": [
+    {
+      "from": "vwm_capacity",
+      "to": "slot_model",
+      "relationship": "explained_by",
+      "label": "explains via discrete storage",
+      "evidence": "Luck & Vogel showed constant K~3.5 across set sizes; compatible with fixed-slot interpretation",
+      "strength": "strong"
+    },
+    {
+      "from": "vwm_capacity",
+      "to": "resource_model",
+      "relationship": "explained_by",
+      "label": "explains via resource allocation",
+      "evidence": "Zhang & Luck showed precision increases with fewer items; compatible with shared-resource interpretation",
+      "strength": "strong"
+    },
+    {
+      "from": "slot_model",
+      "to": "resource_model",
+      "relationship": "contradicts",
+      "label": "mechanistically incompatible",
+      "evidence": "Slot model predicts all-or-nothing; resource model predicts variable precision. Both fit data but via different processes",
+      "strength": "moderate"
+    },
+    {
+      "from": "change_detection",
+      "to": "vwm_capacity",
+      "relationship": "measures",
+      "label": "quantifies capacity via K estimate",
+      "evidence": "Luck & Vogel's paradigm became standard method for measuring VWM capacity",
+      "strength": "very_strong"
+    },
+    {
+      "from": "set_size_effect",
+      "to": "slot_model",
+      "relationship": "supports",
+      "label": "plateau in performance consistent with fixed slots",
+      "evidence": "K plateaus at 3-4 even when set size increases to 8+; suggests limited discrete slots",
+      "strength": "moderate"
+    },
+    {
+      "from": "precision_tradeoff",
+      "to": "resource_model",
+      "relationship": "supports",
+      "label": "precision decreases with load; supports resource sharing",
+      "evidence": "Zhang & Luck (2008) showed inverse relationship between items and per-item precision",
+      "strength": "strong"
+    },
+    {
+      "from": "all_or_nothing",
+      "to": "slot_model",
+      "relationship": "supports",
+      "label": "all-or-nothing pattern matches discrete slots",
+      "evidence": "Memory for items either complete or absent; limited intermediate precision states",
+      "strength": "moderate"
+    },
+    {
+      "from": "flexible_resolution",
+      "to": "resource_model",
+      "relationship": "supports",
+      "label": "variable precision matches resource allocation",
+      "evidence": "Items stored with continuous range of precisions depending on task demands",
+      "strength": "strong"
+    },
+    {
+      "from": "slot_model",
+      "to": "feature_binding",
+      "relationship": "assumes",
+      "label": "each slot binds multiple features into unified object",
+      "evidence": "Luck & Vogel assumed feature binding occurs automatically within slots",
+      "strength": "moderate"
+    },
+    {
+      "from": "attention_mechanism",
+      "to": "vwm_capacity",
+      "relationship": "regulates",
+      "label": "attentional control gates capacity bottleneck",
+      "evidence": "Cowan (2001) showed capacity limit reflects attention-based selection mechanism",
+      "strength": "strong"
+    },
+    {
+      "from": "attention_mechanism",
+      "to": "resource_model",
+      "relationship": "implements",
+      "label": "attention allocates resources across items",
+      "evidence": "Zhang & Luck linked attentional focus to precision allocation across items",
+      "strength": "moderate"
+    },
+    {
+      "from": "cowan_synthesis",
+      "to": "slot_model",
+      "relationship": "integrates",
+      "label": "incorporates discrete focusing mechanism",
+      "evidence": "Cowan's model includes 4±1 discrete slots as focus component",
+      "strength": "moderate"
+    },
+    {
+      "from": "cowan_synthesis",
+      "to": "resource_model",
+      "relationship": "integrates",
+      "label": "incorporates flexible resource allocation",
+      "evidence": "Cowan's model includes continuous resource distribution around focused items",
+      "strength": "moderate"
+    },
+    {
+      "from": "iconic_memory",
+      "to": "vwm_capacity",
+      "relationship": "feeds_into",
+      "label": "high-capacity sensory buffer compressed into VWM",
+      "evidence": "Luck & Vogel discussed how iconic memory (~10 items) is bottlenecked into VWM (~3-4)",
+      "strength": "moderate"
+    },
+    {
+      "from": "visual_cortex",
+      "to": "vwm_capacity",
+      "relationship": "constrains",
+      "label": "neural architecture limits capacity",
+      "evidence": "Cowan argued capacity reflects cortical organization; not cognitive choice",
+      "strength": "moderate"
+    },
+    {
+      "from": "change_detection",
+      "to": "set_size_effect",
+      "relationship": "produces",
+      "label": "paradigm reveals plateau in K",
+      "evidence": "Classic finding from repeated change detection experiments",
+      "strength": "very_strong"
+    },
+    {
+      "from": "change_detection",
+      "to": "precision_tradeoff",
+      "relationship": "can_measure",
+      "label": "RT/accuracy can reveal precision changes",
+      "evidence": "Zhang & Luck extended change detection to measure precision curves",
+      "strength": "strong"
+    }
+  ],
+  "metadata": {
+    "created": "2026-04-14",
+    "source_papers": {
+      "luck_vogel1997": "Luck, S. J., & Vogel, E. K. (1997). The capacity of visual working memory for features and conjunctions. Nature, 390(6657), 279-281.",
+      "cowan2001": "Cowan, N. (2001). The magical number 4 in short-term memory. Behavioral and Brain Sciences, 24(1), 87-185.",
+      "zhang_luck2008": "Zhang, W., & Luck, S. J. (2008). Discrete fixed-resolution representations in visual working memory. Nature, 453(7192), 233-235."
+    },
+    "difficulty_level": "undergraduate",
+    "purpose": "Visualize competing theoretical explanations for VWM capacity limits and their supporting evidence"
+  }
+}

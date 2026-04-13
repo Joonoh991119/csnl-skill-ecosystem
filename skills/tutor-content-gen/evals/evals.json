@@ -1,0 +1,44 @@
+[
+  {
+    "prompt": "Generate a conceptual explanation of 'visual working memory capacity limits' for an undergraduate student. Use these source papers: Luck & Vogel (1997), Cowan (2001), Zhang & Luck (2008). Include both English and Korean versions. The explanation should cover the slot model vs resource model debate.",
+    "expected_output_criteria": [
+      "Follows Conceptual Explanation structure from SKILL.md",
+      "One-sentence summary in both EN and KO",
+      "Core explanation at undergraduate level: defines terms, uses analogies",
+      "Key terms with [Source: Author, Year] citations",
+      "Visual analogy or metaphor for capacity limits",
+      "Connection to other concepts (attention, neural coding)",
+      "Uses TERM_GLOSSARY for Korean translations (시각적 작업 기억, 슬롯 모델, etc.)",
+      "All claims traceable to the three source papers",
+      "No hallucinated facts beyond source material"
+    ]
+  },
+  {
+    "prompt": "Create a 10-question multiple choice quiz on fMRI methodology for master's level students. Cover topics: BOLD signal, hemodynamic response function, spatial resolution, temporal resolution, preprocessing steps, GLM analysis, and common artifacts. Generate bilingual questions (EN/KO).",
+    "expected_output_criteria": [
+      "10 questions with 4 options each (A, B, C, D)",
+      "Bilingual: q_en, q_ko, options in both languages",
+      "Exactly one correct answer per question",
+      "Explanations for correct answer AND why each distractor is wrong",
+      "Master's level: assumes basic neuroscience, focuses on mechanisms",
+      "Covers all 7 specified topics",
+      "Distractors are plausible misconceptions, not obviously wrong",
+      "Uses TERM_GLOSSARY for Korean fMRI terms (BOLD 신호, etc.)",
+      "Output as valid JSON matching quiz schema from SKILL.md"
+    ]
+  },
+  {
+    "prompt": "Generate a concept map for the relationship between attention, working memory, and neural coding. Use these 5 papers from our Zotero collection as source material. Output as JSON with nodes and edges that sci-viz can render as an interactive network diagram.",
+    "expected_output_criteria": [
+      "JSON output with nodes and edges arrays",
+      "Nodes have: id, label, definition, papers fields",
+      "Edges have: from, to, relationship, evidence fields",
+      "Relationship types from SKILL.md vocabulary (causes, correlates_with, is_component_of, etc.)",
+      "At least 8 concept nodes spanning all three topics",
+      "At least 10 edges showing cross-topic relationships",
+      "All definitions and evidence grounded in source papers",
+      "Compatible with sci-viz rendering",
+      "Includes both English labels and Korean equivalents"
+    ]
+  }
+]

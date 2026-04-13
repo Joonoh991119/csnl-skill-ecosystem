@@ -1,0 +1,40 @@
+[
+  {
+    "prompt": "Set up the evaluation pipeline for our CSNL RAG tutor. I have a Zotero collection with 50 papers across VWM, attention, fMRI methods, neural coding, and psychophysics. I need: (1) a test suite of 30 queries with ground truth, (2) retrieval metrics (precision@5, recall@10, MRR), (3) generation factuality scoring. The pipeline uses PostgreSQL+pgvector with BGE-M3 1024d embeddings. Give me the complete evaluation setup.",
+    "expected_output_criteria": [
+      "Creates bootstrap_ground_truth.py with 30 query templates covering 5+ domains",
+      "Each query has relevant_papers, relevant_sections, difficulty, domain fields",
+      "Retrieval eval code connects to PostgreSQL+pgvector (not ChromaDB/LanceDB)",
+      "Uses cosine similarity with 1024d vectors (BGE-M3 compatible)",
+      "Generation eval uses LLM-as-judge with explicit scoring rubric",
+      "Reports precision@5, recall@10, MRR, nDCG@10",
+      "Includes honest caveat about LLM-as-judge noise (~0.7 human agreement)",
+      "Does NOT promise DSPy auto-optimization (marks as future work)"
+    ]
+  },
+  {
+    "prompt": "I ran the eval and precision@5 dropped from 0.72 to 0.45 after I changed the chunk size from 512 to 1024 tokens. Help me diagnose why and set up an A/B comparison report. Show the results as an HTML report.",
+    "expected_output_criteria": [
+      "Diagnoses chunk size impact on retrieval precision systematically",
+      "Sets up A/B comparison between 512-token and 1024-token chunking",
+      "Generates HTML report with side-by-side metric comparison",
+      "Includes per-query breakdown showing which queries degraded most",
+      "Suggests specific remediation: overlap increase, hybrid search tuning",
+      "Uses generate_recommendations pattern from SKILL.md",
+      "Does NOT suggest automated DSPy fix (human-in-the-loop recommendation)"
+    ]
+  },
+  {
+    "prompt": "Create the ground truth dataset for our 17 CRMB textbook chapters. I need queries that test understanding of each chapter topic, with relevant source sections identified. The chapters cover: visual perception, attention, working memory, long-term memory, decision making, motor control, language, emotion, consciousness, development, plasticity, computational models, neuroimaging methods, psychophysics, neural coding, population coding, and Bayesian brain.",
+    "expected_output_criteria": [
+      "Produces at least 30 queries (aim for 2 per chapter = 34)",
+      "Covers all 17 chapters explicitly",
+      "Each query has: query_en, query_ko, relevant_papers, relevant_sections, difficulty, domain",
+      "Difficulty distribution: ~10 undergrad, ~12 master, ~8 PhD",
+      "Bilingual queries (English + Korean)",
+      "Includes domain-specific terminology (not generic questions)",
+      "Warns about manual verification requirement",
+      "Saves as structured JSON compatible with eval_retrieval function"
+    ]
+  }
+]
