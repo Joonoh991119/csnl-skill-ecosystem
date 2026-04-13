@@ -1,51 +1,53 @@
 # CSNL Skill Ecosystem
 
-**Cognitive & Systems Neuroscience Laboratory — AI Knowledge System Skills**
+Scientific RAG Tutoring System skills for the Cognitive and Systems Neuroscience Laboratory (CSNL), Seoul National University.
 
-Scientific RAG tutoring system을 위한 Cowork 스킬 생태계.  
-Seoul National University, Department of Brain and Cognitive Sciences.
+## Skills
+
+| Skill | SKILL.md | Validated | Packaged | Eval Iters | Tutor DB Contribution |
+|---|---|---|---|---|---|
+| **rag-pipeline** | v4 (pgvector, parameterized dim) | ✅ | ✅ | 1 (baseline + with-skill) | DIRECT: core retrieval |
+| **paper-processor** | v2 (complete figure extraction) | ✅ | ✅ | 2 (baseline + with-skill + batch) | DIRECT: ingestion |
+| **eval-runner** | v3 (Korean metrics added) | ✅ | ✅ | 1 (bootstrap 34 queries) | INDIRECT: validation |
+| **tutor-content-gen** | v2 (quality checklist added) | ✅ | ✅ | 1 (VWM bilingual) | DIRECT: content gen |
+| **sci-viz** | v1 | ✅ | ✅ | 0 | INDIRECT: visualization |
 
 ## Architecture
 
 ```
-skills/
-├── rag-pipeline/       ← P0: PostgreSQL+pgvector 기반 RAG 파이프라인
-├── paper-processor/    ← P0: 논문 구조 추출 (sections, claims, figures)
-├── tutor-content-gen/  ← P1: 교육 콘텐츠 생성 (한영 병렬, 난이도별)
-├── eval-runner/        ← P1: 평가 파이프라인 (precision@k, factuality)
-└── sci-viz/            ← P2: 과학 시각화 자동 생성
-
-docs/
-├── BLUEPRINT.md        ← 전체 설계 + 로드맵 + 인프라 전략
-├── TUTOR_FOCUSED_EVALUATION.md  ← 튜터 DB 기여도 기준 스킬 재평가
-└── DOWNSTREAM_REQUIREMENTS.md   ← 세션별 역방향 의존성 분석
-
-meta-review/
-└── AUDIT.md            ← QC 결과: 실현가능성 판정 + 수정 이력
+Zotero MCP → paper-processor → rag-pipeline (pgvector) → tutor-content-gen → Notion/UI
+                                      ↑                         ↓
+                               eval-runner ←──────────────── sci-viz
 ```
+
+## Key Design Decisions
+
+- **PostgreSQL + pgvector** over LanceDB/ChromaDB: production-grade, SQL joins, ACID
+- **BGE-M3 1024d** as default embedding (OpenRouter API or local sentence-transformers)
+- **Parameterized EMBEDDING_DIM**: supports model switching without schema breaks
+- **No DSPy auto-optimization**: marked as Phase 2+ research, not promised
+- **No MLX for embeddings**: MLX is text-gen only; embeddings use sentence-transformers + MPS
+- **30+ ground truth queries**: bootstrap dataset for statistically meaningful eval
+
+## QC Status
+
+- Meta-review AUDIT_v2: All 5 skills PASS (0 blockers, 0 fantasy claims)
+- All skills pass `quick_validate.py` and `package_skill.py`
+- Cross-skill dependency matrix: no circular dependencies
+- Bootstrap ground truth pushed to CRMB_tutor repo (34 queries, 17 chapters)
+
+## Commits
+
+| Hash | Description |
+|---|---|
+| `0659daf` | iteration-3: packaged .skill files + audit warning fixes |
+| `4e5f690` | iteration-2: meta-review audit + EMBEDDING_DIM + quality checklist |
+| `a2af1f4` | iteration-1: evals for paper-processor, eval-runner, tutor-content-gen |
+| `ca39607` | rag-pipeline v3 + CRMB compat + baseline eval |
 
 ## Environment
 
-- **Hardware**: Mac Mini M4 Pro, 64GB unified memory
-- **DB**: PostgreSQL + pgvector (primary), ChromaDB (dev fallback)
-- **Embedding**: OpenRouter API (production) / BGE-M3 or Qwen3-Embedding-8B (local)
-- **LLM**: Qwen2.5-32B Q5_K_M via MLX (local) / Claude via API
-- **MCP**: Zotero, Notion, Slack, Gmail, Google Calendar, Desktop Commander, Chrome
-
-## Status
-
-| Skill | SKILL.md | QC Pass | skill-creator Test | Deployed |
-|---|---|---|---|---|
-| rag-pipeline | ✅ v2 (pgvector) | 🔄 Auditing | ⏳ Pending | ❌ |
-| paper-processor | ✅ v1 | 🔄 Auditing | ⏳ Pending | ❌ |
-| tutor-content-gen | ✅ v1 | 🔄 Auditing | ⏳ Pending | ❌ |
-| eval-runner | ✅ v2 (bootstrap added) | 🔄 Auditing | ⏳ Pending | ❌ |
-| sci-viz | ✅ v1 | 🔄 Auditing | ⏳ Pending | ❌ |
-
-## Development Loop
-
-```
-push SKILL.md → skill-creator test → review failures → fix → push again
-```
-
-완료 선언 금지. 루프는 계속된다.
+- Mac Mini M4 Pro, 64GB RAM
+- PostgreSQL 16 + pgvector
+- Embedding: OpenRouter API (primary) or local BGE-M3 FP16 with MPS
+- Local LLM: Qwen2.5-32B via Ollama (for eval judging)

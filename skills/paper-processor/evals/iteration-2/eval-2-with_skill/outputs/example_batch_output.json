@@ -1,0 +1,91 @@
+{
+  "batch_summary": {
+    "timestamp": "2026-04-14T18:45:32.123456",
+    "total_papers_requested": 10,
+    "papers_successfully_processed": 9,
+    "papers_failed": 1,
+    "success_rate": 90.0
+  },
+  "extraction_results": {
+    "total_claims_extracted": 156,
+    "total_figures_found": 24,
+    "figures_successfully_extracted": 24
+  },
+  "failures": [
+    {
+      "item_key": "zhou_2021",
+      "error": "PDF file not found at /tmp/zhou_2021.pdf"
+    }
+  ],
+  "individual_paper_summary": {
+    "cowan_2001": {
+      "title": "The magical number 4 in short-term memory",
+      "sections": 4,
+      "claims": 18,
+      "figures": 3,
+      "figures_extracted": 3
+    },
+    "vogel_2006": {
+      "title": "Neural activity predicts individual differences in visual working memory",
+      "sections": 5,
+      "claims": 19,
+      "figures": 5,
+      "figures_extracted": 5
+    },
+    "luck_2008": {
+      "title": "Visual working memory capacity: from psychophysics and neurobiology",
+      "sections": 6,
+      "claims": 20,
+      "figures": 4,
+      "figures_extracted": 4
+    },
+    "anderson_2011": {
+      "title": "Suppressing unwanted memories by executive control",
+      "sections": 5,
+      "claims": 17,
+      "figures": 2,
+      "figures_extracted": 2
+    },
+    "bays_2011": {
+      "title": "The precision of visual working memory is set by allocation of a shared resource",
+      "sections": 5,
+      "claims": 16,
+      "figures": 3,
+      "figures_extracted": 3
+    },
+    "song_2014": {
+      "title": "Strengthening new memories by reactivating parallel memory representations",
+      "sections": 4,
+      "claims": 15,
+      "figures": 2,
+      "figures_extracted": 2
+    },
+    "tsuchida_2014": {
+      "title": "Dynamic reconfiguration of the fronto-parietal network supports cognitive control",
+      "sections": 5,
+      "claims": 18,
+      "figures": 3,
+      "figures_extracted": 3
+    },
+    "lewis_lapate_2016": {
+      "title": "Rapid eyes-closed resting state fMRI activity predicts mood changes",
+      "sections": 5,
+      "claims": 19,
+      "figures": 1,
+      "figures_extracted": 1
+    },
+    "kiyonaga_2017": {
+      "title": "Working memory as internal attention: toward an integrative account",
+      "sections": 6,
+      "claims": 14,
+      "figures": 1,
+      "figures_extracted": 1
+    }
+  },
+  "processing_notes": {
+    "figure_extraction_method": "fitz.Pixmap with CMYK->RGB conversion",
+    "image_formats_supported": ["PNG", "JPEG", "TIFF"],
+    "caption_extraction": "Text proximity heuristic (300px radius from image bbox)",
+    "total_processing_time_seconds": 127.43
+  }
+}
