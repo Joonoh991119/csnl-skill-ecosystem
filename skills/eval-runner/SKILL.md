@@ -313,6 +313,42 @@ you can wrap the evaluation metrics as DSPy assertions:
 # This is a Phase 2 goal, not a Phase 0-1 deliverable.
 ```
 
+## Korean Language Evaluation
+
+The tutor generates bilingual content. Korean output needs dedicated evaluation.
+
+```python
+def eval_korean_quality(qa_pairs_ko: list) -> dict:
+    """Evaluate Korean content quality using LLM-as-judge."""
+    judge_prompt = """다음 한국어 튜터링 답변의 품질을 평가하세요.
+
+질문: {question}
+답변: {answer}
+
+평가 기준 (각 1-5점):
+1. 한국어 자연스러움: 번역투가 아닌 자연스러운 한국어인가?
+2. 전문 용어 정확성: 신경과학 용어가 정확하게 사용되었는가?
+3. 영한 용어 일관성: TERM_GLOSSARY와 일치하는가?
+4. 교육적 명확성: 해당 난이도 수준 학생이 이해할 수 있는가?
+
+각 기준별 점수와 근거를 제시하세요."""
+
+    scores = {'naturalness': [], 'terminology': [], 'consistency': [], 'clarity': []}
+    for qa in qa_pairs_ko:
+        prompt = judge_prompt.format(question=qa['query_ko'], answer=qa['answer_ko'])
+        result = call_local_llm(prompt)  # Qwen2.5-32B supports Korean
+        parsed = parse_korean_scores(result)
+        for k in scores:
+            scores[k].append(parsed.get(k, 0))
+
+    return {k: sum(v)/len(v) for k, v in scores.items()}
+```
+
+### Korean-Specific Checks
+- **번역투 탐지**: Flag sentences with Japanese-style passive constructions (되어지다, 이루어지다 overuse)
+- **용어 일관성**: Cross-check against TERM_GLOSSARY from tutor-content-gen
+- **혼용 비율**: Measure Korean vs English ratio in answers (target: >70% Korean for undergrad)
+
 ## Scheduled Evaluation (via schedule skill)
 
 Set up on-demand evals first, then automate:

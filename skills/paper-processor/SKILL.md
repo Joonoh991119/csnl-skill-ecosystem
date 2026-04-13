@@ -166,8 +166,10 @@ def extract_claims(sections: list) -> list:
 ## Figure & Table Extraction
 
 ```python
-def extract_figures(doc, pages_data: list) -> list:
+def extract_figures(doc, pages_data: list, output_dir: str = "/tmp/figures") -> list:
     """Extract figure images and their captions."""
+    import os
+    os.makedirs(output_dir, exist_ok=True)
     figures = []
     for page_idx, page_data in enumerate(pages_data):
         # Find figure captions in text
@@ -182,10 +184,23 @@ def extract_figures(doc, pages_data: list) -> list:
                 'page': page_idx + 1,
             })
 
-        # Extract actual images from page
-        for img_idx, img in enumerate(page_data.get('images', [])):
-            # img is (xref, smask, width, height, bpc, colorspace, ...)
-            pass  # Image extraction via fitz.Pixmap if needed
+        # Extract actual images from page and save as PNG
+        page = doc[page_idx]
+        for img_idx, img in enumerate(page.get_images(full=True)):
+            xref = img[0]
+            try:
+                pix = fitz.Pixmap(doc, xref)
+                if pix.n > 4:  # CMYK → RGB
+                    pix = fitz.Pixmap(fitz.csRGB, pix)
+                img_path = f"{output_dir}/fig_p{page_idx+1}_{img_idx}.png"
+                pix.save(img_path)
+                # Link image to nearest figure caption by page proximity
+                for fig in figures:
+                    if fig['page'] == page_idx + 1 and 'image_path' not in fig:
+                        fig['image_path'] = img_path
+                        break
+            except Exception as e:
+                print(f"Warning: Could not extract image {xref} on page {page_idx+1}: {e}")
 
     return figures
 ```
