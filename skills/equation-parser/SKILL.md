@@ -1088,3 +1088,43 @@ def find_cross_domain_links(eq_a_domain: str, eq_b_domain: str,
             links.append(bridge)
     return links
 ```
+
+
+## Skill Interface: Output Schema
+
+This skill produces standardized JSON output consumed by downstream skills (rag-pipeline, sci-post-gen).
+
+```python
+EQUATION_OUTPUT_SCHEMA = {
+    "request_id": "uuid4",  # Correlation ID for tracing
+    "embedding_config": {
+        "model": "BAAI/bge-m3",
+        "dimension": 1024,
+        "device": "mps",
+    },
+    "equations": [{
+        "latex": str,
+        "mathml": str,
+        "plain_text": str,
+        "equation_number": str,
+        "domain": str,  # ART, BCS, FCS, LAMINART, efficient_coding
+        "semantic_tags": list,
+        "cross_refs": list,
+        "context_before": str,
+        "context_after": str,
+        "parse_method": str,
+        "parse_quality": str,
+        "korean_annotations": dict,
+    }],
+    "citation": {
+        "source_type": str,  # "crmb_chapter" or "paper"
+        "chapter": int,
+        "authors": str,
+        "year": int,
+        "title": str,
+        "page": int,
+    }
+}
+```
+
+**Output contract:** All equations include LaTeX, MathML, and plain-text representations. Citations are required for traceability. Request IDs enable cross-skill correlation logging.

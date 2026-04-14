@@ -849,3 +849,20 @@ def migration_eval_hook(conn_string: str, queries: list, migrate_fn: callable, r
     return {"action": "keep", "diff": diff, "improvement": avg_ndcg_delta}
 ```
 
+
+
+## Skill Interface: Citation Schema
+
+This skill standardizes citations flowing through the pipeline from equation-parser and into sci-post-gen.
+
+```python
+CITATION_SCHEMA = {
+    "source_type": str,       # "crmb_chapter", "paper", "equation"
+    "ref_id": str,            # e.g., "CRMB_Ch5_Eq5.3" or "WeiStocker2015_Eq2"
+    "display_text": str,      # e.g., "Grossberg (2021), Ch.5, Eq. (5.3)"
+    "display_text_ko": str,   # Korean: "Grossberg (2021), 제5장, 수식 (5.3)"
+    "bibtex_key": str,
+}
+```
+
+**Contract:** All upstream equation/chunk citations are normalized to this format. Downstream skill (sci-post-gen) consumes these directly for bibliography generation without re-parsing.

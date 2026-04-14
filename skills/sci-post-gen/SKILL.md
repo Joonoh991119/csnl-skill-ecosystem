@@ -437,3 +437,27 @@ figure_request = {
 3. Receive SVG/PNG asset + caption metadata
 4. Embed in Quarto: `![caption](figure-uuid.svg)`
 5. Update references in bibliography if sci-viz generates citations
+
+
+## Skill Interface: Input Requirements
+
+This skill consumes structured inputs from equation-parser and rag-pipeline. All upstream outputs must conform to this schema.
+
+```python
+POST_INPUT_SCHEMA = {
+    "request_id": str,
+    "query": str,
+    "retrieved_chunks": list,  # from rag-pipeline
+    "equations": list,         # from equation-parser (EQUATION_OUTPUT_SCHEMA)
+    "citations": list,         # CITATION_SCHEMA format
+    "post_config": {
+        "format": str,         # "blog", "thread", "newsletter", "academic"
+        "language": str,       # "ko", "en", "bilingual"
+        "audience": str,       # "undergrad", "grad", "researcher"
+        "include_equations": bool,
+        "include_figures": bool,
+    }
+}
+```
+
+**Contract:** Validates that all upstream inputs (request_id, equation format, citation format) match expected schema before processing. Raises validation error if contract violated.
