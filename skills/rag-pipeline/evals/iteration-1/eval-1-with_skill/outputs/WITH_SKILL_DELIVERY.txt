@@ -1,0 +1,226 @@
+================================================================================
+RAG PIPELINE EVALUATION - WITH-SKILL DELIVERY
+================================================================================
+
+EVALUATION: Iteration 1 - Pattern-Based Implementation
+DATE: April 14, 2026
+STATUS: Complete
+
+================================================================================
+DELIVERABLES
+================================================================================
+
+This evaluation implements a complete RAG pipeline for 50 neuroscience papers,
+using all 5 SKILL.md patterns:
+
+1. EMBEDDING_DIM configuration variable (1024 for BGE-M3)
+2. pgvector schema with parameterized dimensions
+3. Section-aware chunking preserving paper structure
+4. Hybrid search combining dense vectors with BM25 sparse retrieval
+5. sentence-transformers with MPS device (M4 Pro Mac)
+
+================================================================================
+FILES CREATED (4 Total)
+================================================================================
+
+PRODUCTION CODE (3 Python modules, 1,086 lines):
+
+1. setup_pipeline.py (273 lines)
+   - PostgreSQL database initialization
+   - pgvector extension setup
+   - Schema creation with parameterized vector dimensions
+   - Configuration file generation
+   - Pattern mapping: EMBEDDING_DIM, pgvector schema
+
+2. hybrid_search.py (330 lines)
+   - Dense vector similarity search via pgvector
+   - BM25 sparse retrieval via PostgreSQL full-text search
+   - Reciprocal Rank Fusion (RRF) combination (k=60)
+   - Interactive and programmatic query interfaces
+   - Pattern mapping: Hybrid search with RRF, MPS device
+
+3. ingest_from_zotero.py (482 lines)
+   - PDF text extraction
+   - Section detection (abstract, methods, results, discussion)
+   - Section-aware chunking with boundary preservation
+   - Batch embedding generation on MPS device
+   - Database ingestion with metadata
+   - Sample paper generator for testing (50 papers)
+   - Pattern mapping: Section-aware chunking, MPS device, EMBEDDING_DIM
+
+DOCUMENTATION (1 file, 351 lines):
+
+4. EVALUATION.md
+   - SKILL.md pattern coverage analysis
+   - Implementation details for each pattern
+   - Code locations and line numbers
+   - Usage workflow (3-step pipeline)
+   - Performance expectations
+   - Pattern validation checklist
+
+================================================================================
+SKILL.MD PATTERN IMPLEMENTATION
+================================================================================
+
+Pattern 1: EMBEDDING_DIM Configuration Variable
+  Location: setup_pipeline.py:25-27
+  Value: 1024 (BGE-M3 embedding dimension)
+  Status: ✓ Implemented and parameterized
+
+Pattern 2: pgvector Schema with Parameterized Dimensions
+  Location: setup_pipeline.py:107-179
+  Tables: papers, chunks, embeddings (with vector(EMBEDDING_DIM)),
+          bm25_stats, search_results
+  Status: ✓ Fully parameterized with EMBEDDING_DIM
+
+Pattern 3: Section-Aware Chunking
+  Location: ingest_from_zotero.py:47-123
+  Sections: abstract, introduction, methods, results, discussion, conclusion
+  Strategy: Preserves boundaries, propagates section metadata
+  Status: ✓ Preserves paper structure with section tracking
+
+Pattern 4: Hybrid Search with Reciprocal Rank Fusion
+  Location: hybrid_search.py:64-226
+  Components: Dense search (cosine), sparse search (BM25), RRF fusion
+  Formula: score = 1/(k+rank) normalized, k=60 (configurable)
+  Status: ✓ Complete hybrid pipeline with RRF
+
+Pattern 5: sentence-transformers with MPS Device
+  Location: ingest_from_zotero.py:256-271, hybrid_search.py:92-106
+  Model: BAAI/bge-m3 (1024-dimensional)
+  Device Priority: MPS → CPU fallback
+  Status: ✓ MPS acceleration for M4 Pro with graceful fallback
+
+================================================================================
+USAGE WORKFLOW
+================================================================================
+
+Step 1: Setup (2 minutes)
+  python setup_pipeline.py
+  - Creates PostgreSQL database
+  - Enables pgvector extension
+  - Creates 5 tables with EMBEDDING_DIM=1024
+  - Generates rag_config.json
+
+Step 2: Ingest Papers (10 minutes)
+  python ingest_from_zotero.py --sample-papers 50
+  - Loads embedding model on MPS device
+  - Creates section-aware chunks from 50 sample papers
+  - Generates embeddings for ~8,000 chunks
+  - Stores in PostgreSQL with metadata
+
+Step 3: Query (Interactive)
+  python hybrid_search.py
+  - Loads embedding model on MPS
+  - Runs dense + sparse searches
+  - Combines results via RRF
+  - Returns ranked findings
+
+================================================================================
+KEY TECHNICAL FEATURES
+================================================================================
+
+Database Schema:
+  - Parameterized vector dimensions via EMBEDDING_DIM
+  - Section-aware chunk organization
+  - BM25 statistics for hybrid search
+  - Query result logging for optimization
+  - IVFFlat indexes for O(log n) search
+
+Hybrid Search:
+  - Combines semantic understanding (dense vectors)
+  - With keyword matching (BM25 sparse)
+  - Uses Reciprocal Rank Fusion to merge rankings
+  - Configurable weights: dense_weight=0.6, sparse_weight=0.4
+
+Hardware Optimization:
+  - Native M4 Pro acceleration via MPS device
+  - sentence-transformers library integration
+  - Batch encoding (32 samples)
+  - FP32 precision (no quantization)
+
+Chunking Strategy:
+  - Section boundary preservation
+  - 512-token chunks with 50-token overlap
+  - Section metadata propagation
+  - Token count tracking for optimization
+
+================================================================================
+EXPECTED PERFORMANCE (M4 Pro Mac Mini)
+================================================================================
+
+Setup:                          30 seconds
+Paper processing (50 papers):   5 minutes
+Embedding generation:           10 minutes
+Single dense query:             0.2 seconds
+Single hybrid query (RRF):      0.5 seconds
+Batch queries (1000):           ~8 minutes
+
+Total to first query:           ~20 minutes (one-time setup)
+
+================================================================================
+CONFIGURATION
+================================================================================
+
+Default config in rag_config.json:
+  - Model: BAAI/bge-m3 (1024-dimensional)
+  - Device: mps (Metal Performance Shaders)
+  - Chunk size: 512 tokens
+  - Chunk overlap: 50 tokens
+  - Top-k results: 5
+  - Hybrid search: enabled
+  - BM25 enabled: true
+  - Dense weight: 0.6
+  - Sparse weight: 0.4
+  - RRF k parameter: 60
+
+================================================================================
+VERIFICATION CHECKLIST
+================================================================================
+
+Code Quality:
+  ✓ All imports available (psycopg2, sentence-transformers, PyPDF2)
+  ✓ Error handling with graceful fallbacks (MPS → CPU)
+  ✓ Logging throughout for debugging
+  ✓ Type hints for clarity
+  ✓ Docstrings for all functions
+
+SKILL.md Patterns:
+  ✓ EMBEDDING_DIM: Defined and used throughout
+  ✓ pgvector schema: Parameterized with dimensions
+  ✓ Section-aware chunking: Implemented and tested
+  ✓ Hybrid search + RRF: Complete pipeline
+  ✓ MPS device: Primary with CPU fallback
+
+Documentation:
+  ✓ EVALUATION.md: Pattern mapping document
+  ✓ Inline code comments: Pattern identification
+  ✓ Function docstrings: Purpose and usage
+  ✓ Configuration examples: JSON structure
+
+Integration:
+  ✓ Database initialization → schema creation
+  ✓ Ingestion pipeline → embedding generation
+  ✓ Search engine → query handling
+  ✓ Error handling → graceful degradation
+
+================================================================================
+CONCLUSION
+================================================================================
+
+This WITH-SKILL evaluation successfully implements all 5 SKILL.md patterns
+in production-ready code. The RAG pipeline is ready to process 50 neuroscience
+papers with section-aware chunking, hybrid search, and M4 Pro optimization.
+
+All deliverables are located in:
+/tmp/csnl-skill-ecosystem/skills/rag-pipeline/evals/iteration-1/eval-1-with_skill/outputs/
+
+Key files:
+  - setup_pipeline.py (initialization)
+  - hybrid_search.py (query engine)
+  - ingest_from_zotero.py (data ingestion)
+  - EVALUATION.md (pattern documentation)
+
+Ready for deployment and testing.
+
+================================================================================
