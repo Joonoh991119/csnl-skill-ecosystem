@@ -1,0 +1,40 @@
+[
+  {
+    "prompt": "I have psychophysics data from a temporal order judgment (TOJ) experiment. The data has columns: SOA (stimulus onset asynchrony in ms, ranging from -200 to +200), response (proportion 'audio first' responses), and condition (visual_lead, audio_lead). Plot a psychometric function with sigmoid fits for each condition, mark the PSE (point of subjective equality), and make it publication-quality for Journal of Neuroscience submission.",
+    "expected_output_criteria": [
+      "Uses matplotlib for publication-quality static figure",
+      "Sigmoid/logistic fit to psychometric data",
+      "PSE marked with vertical dashed lines",
+      "JNeurosci style: specific font sizes, DPI >= 300, appropriate figure size",
+      "Two conditions plotted with distinct colors from a colorblind-safe palette",
+      "Proper axis labels: SOA (ms), Proportion 'Audio First'",
+      "Legend with condition labels",
+      "Code uses synthetic data for demonstration"
+    ]
+  },
+  {
+    "prompt": "Create an interactive brain activation heatmap from my fMRI GLM results. I have a CSV with columns: ROI_name, x, y, z (MNI coordinates), t_statistic, p_value, cluster_size. Show activations color-coded by t-statistic with hover tooltips showing all info. Use Plotly for interactivity.",
+    "expected_output_criteria": [
+      "Uses Plotly for interactive HTML output",
+      "Scatter3d or surface plot of MNI coordinates",
+      "Color scale mapped to t-statistic values",
+      "Hover tooltips with ROI name, coordinates, t-stat, p-value, cluster size",
+      "Appropriate neuroscience color scheme (hot/cool for positive/negative)",
+      "Interactive rotation and zoom",
+      "Title and axis labels in MNI space"
+    ]
+  },
+  {
+    "prompt": "Make a spike raster plot with PSTH (peri-stimulus time histogram) below it for 50 neurons recorded during a visual working memory delay period. The stimulus appears at t=0, the delay period is 0-1000ms, and the probe appears at t=1000ms. Mark these events on the plot. Show firing rate changes across the population.",
+    "expected_output_criteria": [
+      "Two-panel figure: raster on top, PSTH below",
+      "Shared x-axis (time in ms)",
+      "Raster: individual spike ticks for 50 neurons",
+      "PSTH: mean firing rate with SEM shading",
+      "Event markers: stimulus onset (0ms), probe (1000ms)",
+      "Synthetic spike data generated for demonstration",
+      "Publication-quality formatting",
+      "Uses matplotlib subplot with appropriate aspect ratios"
+    ]
+  }
+]
