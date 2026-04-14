@@ -424,3 +424,40 @@ For Korean/English bilingual dialogues:
    - Flag any translation ambiguities for tutor review before dialogue delivery
 
 ---
+## Trap Query Detection & Semantic Distance
+
+1. **Semantic Distance Check** — Before generating claims, verify the concept chain is explicit in CRMB:
+```python
+def check_semantic_chain(query_concept: str, retrieved_concepts: list, 
+                          source_text: str) -> dict:
+    """Verify that the query concept is EXPLICITLY linked in source material."""
+    # "nonlinear dynamics" retrieved does NOT imply "chaos theory" unless
+    # the source explicitly says "chaos theory" or "chaotic dynamics"
+    query_terms = set(query_concept.lower().split())
+    source_terms = set(source_text.lower().split())
+    
+    direct_match = query_terms.issubset(source_terms)
+    
+    if not direct_match:
+        return {
+            "status": "UNGROUNDED",
+            "reason": f"'{query_concept}' not explicitly found in retrieved sources",
+            "action": "MUST acknowledge gap to student, do NOT infer connection",
+            "template_ko": "흥미로운 질문이에요! 하지만 CRMB에서 {query_concept}에 대한 직접적인 언급은 찾지 못했어요. 관련된 내용으로 {retrieved_concepts}가 있는데, 이것부터 살펴볼까요?",
+        }
+    return {"status": "GROUNDED", "reason": "explicit match found"}
+```
+
+2. **Learner-Visible Uncertainty** — Korean templates for honest uncertainty:
+```python
+UNCERTAINTY_TEMPLATES_KO = {
+    "UNGROUNDED": "이 주제는 CRMB에서 직접 다루지 않아요. 다만 관련된 내용이 있는데...",
+    "WEAK_LINK": "이 연결은 제가 확실히 말하기 어려워요. CRMB에서는 {related_topic}까지만 다루고 있어요.",
+    "OUT_OF_SCOPE": "이건 CRMB의 범위를 벗어나요. 다른 자료를 찾아보시는 게 좋겠어요.",
+}
+```
+
+3. **Trap Query Examples** — Common patterns to watch for:
+- "ART에서 카오스 이론" → CRMB discusses nonlinear dynamics but NOT chaos theory
+- "BCS에서 딥러닝" → BCS is pre-deep-learning; no connection
+- "Grossberg의 양자역학 모델" → doesn't exist

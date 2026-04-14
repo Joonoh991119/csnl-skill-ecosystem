@@ -808,3 +808,64 @@ for turn_num in range(1, self.num_turns + 1):
 - [ ] Topic fatigue pivot: Expert profile with no hooks, verify immediate pivot
 - [ ] Recovery metric: Track post-pivot engagement recovery within 3 turns
 - [ ] Korean quality: Verify transition dialogue is natural ("이제 다른 주제로 전환해볼까요?")
+
+
+## Diagnostic Instrumentation
+
+### 1. Turn-by-Turn Event Log
+
+```python
+class ConversationLogger:
+    def __init__(self):
+        self.events = []
+    
+    def log_turn(self, turn_num, user_msg, tutor_msg, engagement, hook_type, 
+                 domain, pivot_fired=False, aha_detected=False):
+        self.events.append({
+            "turn": turn_num, "engagement": engagement,
+            "hook_type": hook_type, "domain": domain,
+            "pivot_fired": pivot_fired, "aha_detected": aha_detected,
+            "user_length": len(user_msg), "tutor_length": len(tutor_msg),
+        })
+    
+    def diagnose(self):
+        """Auto-diagnose common failure patterns."""
+        if not self.events:
+            return ["NO_DATA: no events logged"]
+        
+        avg_eng = sum(e["engagement"] for e in self.events) / len(self.events)
+        pivot_events = [e for e in self.events if e["pivot_fired"]]
+        post_pivot_eng = [self.events[i+1]["engagement"] for i, e in enumerate(self.events) 
+                         if e["pivot_fired"] and i+1 < len(self.events)]
+        
+        diagnosis = []
+        if avg_eng < 0.4: diagnosis.append("LOW_BASELINE: profiles may be too disengaged")
+        if pivot_events and post_pivot_eng and sum(post_pivot_eng)/len(post_pivot_eng) < avg_eng:
+            diagnosis.append("PIVOT_BACKFIRE: engagement drops after pivot")
+        if len(set(e["hook_type"] for e in self.events)) < 3:
+            diagnosis.append("HOOK_MONOTONY: insufficient hook diversity")
+        return diagnosis
+```
+
+### 2. A/B Statistical Testing
+
+```python
+from scipy import stats
+import numpy as np
+
+def ab_test_significance(group_a_metrics: list, group_b_metrics: list, alpha=0.05):
+    """Proper hypothesis testing with effect size."""
+    t_stat, p_value = stats.ttest_ind(group_a_metrics, group_b_metrics)
+    pooled_std = np.std(group_a_metrics + group_b_metrics)
+    effect_size = (np.mean(group_a_metrics) - np.mean(group_b_metrics)) / pooled_std if pooled_std > 0 else 0
+    
+    return {
+        "p_value": p_value, "significant": p_value < alpha, 
+        "effect_size": effect_size, 
+        "interpretation": 
+            "no_effect" if abs(effect_size) < 0.2 
+            else "small" if abs(effect_size) < 0.5 
+            else "medium" if abs(effect_size) < 0.8 
+            else "large"
+    }
+```

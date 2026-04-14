@@ -586,3 +586,46 @@ output/
   "status": "pass|warn|fail"
 }
 ```
+
+
+## Robustness: Edge Case Handling
+
+1. **Subfigure Detection** — Detect (a), (b), (c) subfigure labels:
+```python
+def extract_subfigures(page_text: str, main_caption: str) -> list:
+    import re
+    subfigs = re.findall(r'\(([a-z])\)\s*([^(]+?)(?=\([a-z]\)|$)', main_caption)
+    return [{"label": label, "caption": cap.strip()} for label, cap in subfigs]
+```
+
+2. **Footnote Extraction** — Detect footnotes (superscript numbers + bottom-of-page text):
+```python
+def extract_footnotes(page, text_blocks: list) -> list:
+    footnotes = []
+    page_height = page.rect.height
+    for block in text_blocks:
+        if block['bbox'][1] > page_height * 0.85:  # Bottom 15% of page
+            if re.match(r'^\d+\s', block['text']):
+                footnotes.append({"number": int(re.match(r'^(\d+)', block['text']).group(1)),
+                                  "text": block['text']})
+    return footnotes
+```
+
+3. **Table Validation** — Detect garbled tables and fallback to image:
+```python
+def validate_table(markdown_table: str) -> dict:
+    rows = markdown_table.strip().split('\n')
+    col_counts = [len(row.split('|')) for row in rows if '|' in row]
+    consistent = len(set(col_counts)) <= 2  # header separator may differ
+    return {"valid": consistent, "rows": len(rows), "action": "image_fallback" if not consistent else "use_text"}
+```
+
+4. **Appendix Detection** — Separate main content from appendix:
+```python
+def detect_appendix_boundary(markdown: str) -> int:
+    patterns = [r'^#+\s*Appendix', r'^#+\s*Supplementary', r'^#+\s*부록']
+    for pattern in patterns:
+        match = re.search(pattern, markdown, re.MULTILINE | re.IGNORECASE)
+        if match: return match.start()
+    return len(markdown)  # No appendix found
+```
