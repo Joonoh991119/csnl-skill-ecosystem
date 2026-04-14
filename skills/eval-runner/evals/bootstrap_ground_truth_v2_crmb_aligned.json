@@ -2,15 +2,17 @@
   "metadata": {
     "dataset_name": "CRMB Ground Truth v2 (Chapter-Aligned)",
     "num_chapters": 17,
-    "num_queries": 34,
+    "num_queries": 85,
     "institution": "Seoul National University - Cognitive and Systems Neuroscience Lab",
-    "description": "Bootstrap ground truth aligned with actual CRMB chapter titles (Grossberg, Conscious Mind Resonant Brain). v2 replaces generic neuroscience topics with chapter-specific queries.",
-    "version": "2.0",
-    "source_book": "Grossberg - Conscious Mind, Resonant Brain"
+    "description": "Expanded ground truth aligned with actual CRMB chapter titles (Grossberg, Conscious Mind Resonant Brain). v2 replaces generic neuroscience topics with chapter-specific queries. Now includes diverse query types: equations/math, cross-domain bridges to efficient coding, clinical/application, and experimental evidence.",
+    "version": "2.1",
+    "source_book": "Grossberg - Conscious Mind, Resonant Brain",
+    "expansion_notes": "Each chapter now has 5 queries covering: foundational concepts, mathematical formulations, cross-domain bridges (ART↔sparse coding, BCS↔basis functions, predictive coding, population coding, metabolic efficiency), clinical/application aspects, and experimental evidence."
   },
   "chapters": {
     "1": {
       "name": "Overview",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch01_q1",
@@ -39,11 +41,54 @@
           ],
           "difficulty": "phd",
           "domain": "systems_neuroscience"
+        },
+        {
+          "id": "ch01_q3",
+          "query_en": "Derive the differential equations governing ART vigilance and explain how vigilance parameter ρ relates to information-theoretic Fisher information in hypothesis selection.",
+          "query_ko": "ART 경계 매개변수를 지배하는 미분 방정식을 유도하고, 경계 매개변수 ρ가 가설 선택에서 정보 이론적 Fisher 정보와 어떻게 관련되는지 설명하라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch01"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch01_q4",
+          "query_en": "How does ART vigilance mechanism implement automatic model selection similar to sparse coding's compression-efficiency trade-off in efficient coding theory?",
+          "query_ko": "ART 경계 메커니즘이 효율적 코딩 이론의 희소 코딩 압축-효율성 트레이드오프와 유사하게 자동 모델 선택을 어떻게 구현하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch01"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "theoretical_neuroscience"
+        },
+        {
+          "id": "ch01_q5",
+          "query_en": "What experimental evidence supports ART's role in category learning and memory consolidation across species and learning paradigms?",
+          "query_ko": "ART의 범주 학습 및 기억 공고화에서의 역할을 종(species)과 학습 패러다임을 가로질러 지지하는 실험적 증거는?",
+          "relevant_papers": [
+            "grossberg_crmb_ch01"
+          ],
+          "relevant_sections": [
+            "results",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "experimental_neuroscience"
         }
       ]
     },
     "2": {
       "name": "How a Brain Makes a Mind",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch02_q1",
@@ -72,11 +117,54 @@
           ],
           "difficulty": "undergrad",
           "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch02_q3",
+          "query_en": "Write the shunting network equation dx/dt = -Ax + (B - x)I^+ - (C + x)I^- and explain how it maintains contrast invariance under noise and saturation.",
+          "query_ko": "Shunting 네트워크 방정식 dx/dt = -Ax + (B - x)I^+ - (C + x)I^-를 기술하고 이것이 어떻게 잡음과 포화 하에서 명도 불변성을 유지하는지 설명하라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch02"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch02_q4",
+          "query_en": "How do shunting networks implement metabolic efficiency and relate to sparse population coding in distributed neural representations?",
+          "query_ko": "Shunting 네트워크가 대사 효율성을 구현하고 분산 신경 표현의 희소 모집단 코딩과 어떻게 관련되는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch02"
+          ],
+          "relevant_sections": [
+            "discussion",
+            "applications"
+          ],
+          "difficulty": "master",
+          "domain": "theoretical_neuroscience"
+        },
+        {
+          "id": "ch02_q5",
+          "query_en": "What in vitro and in vivo recordings validate shunting dynamics and complementary computing architectures in cortical circuits?",
+          "query_ko": "어떤 시험관 내 및 생체 내 기록이 피질 회로에서 shunting 역학과 상보적 계산 아키텍처를 검증하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch02"
+          ],
+          "relevant_sections": [
+            "results",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "experimental_neuroscience"
         }
       ]
     },
     "3": {
       "name": "How a Brain Sees: Constructing Reality",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch03_q1",
@@ -105,11 +193,54 @@
           ],
           "difficulty": "master",
           "domain": "sensory_neuroscience"
+        },
+        {
+          "id": "ch03_q3",
+          "query_en": "Formulate the coupled reaction-diffusion equations for boundary and surface networks and derive conditions for pattern stability in Turing instability analysis.",
+          "query_ko": "경계 및 표면 네트워크에 대한 결합 반응-확산 방정식을 공식화하고 Turing 불안정성 분석에서 패턴 안정성의 조건을 도출하라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch03"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch03_q4",
+          "query_en": "How does the boundary completion circuit implement sparse basis function representations similar to predictive coding in the efficient brain hypothesis?",
+          "query_ko": "경계 완성 회로가 효율적 뇌 가설의 예측적 코딩과 유사한 희소 기저 함수 표현을 어떻게 구현하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch03"
+          ],
+          "relevant_sections": [
+            "discussion",
+            "applications"
+          ],
+          "difficulty": "master",
+          "domain": "theoretical_neuroscience"
+        },
+        {
+          "id": "ch03_q5",
+          "query_en": "What neuroimaging and psychophysical experiments support boundary completion and filling-in mechanisms in primary and secondary visual cortex?",
+          "query_ko": "주(primary) 및 부(secondary) 시각 피질에서 경계 완성 및 채움 메커니즘을 지지하는 신경영상 및 심리물리 실험은?",
+          "relevant_papers": [
+            "grossberg_crmb_ch03"
+          ],
+          "relevant_sections": [
+            "results",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "experimental_neuroscience"
         }
       ]
     },
     "4": {
       "name": "How a Brain Sees: Neural Mechanisms",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch04_q1",
@@ -138,11 +269,54 @@
           ],
           "difficulty": "phd",
           "domain": "sensory_neuroscience"
+        },
+        {
+          "id": "ch04_q3",
+          "query_en": "Mathematically model orientation column development in BCS using Hebbian learning rules and explain how orientation selectivity emerges as sparse basis functions for edge coding.",
+          "query_ko": "Hebbian 학습 규칙을 사용하여 BCS의 방향 선택도 열 발달을 수학적으로 모델링하고 방향 선택성이 가장자리 코딩을 위한 희소 기저 함수로 어떻게 나타나는지 설명하라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch04"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch04_q4",
+          "query_en": "How does the BCS orientation column architecture implement sparse basis decomposition for natural images, relating to efficient coding theory?",
+          "query_ko": "BCS 방향 선택도 열 아키텍처가 효율적 코딩 이론과 관련하여 자연 이미지의 희소 기저 분해를 어떻게 구현하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch04"
+          ],
+          "relevant_sections": [
+            "discussion",
+            "applications"
+          ],
+          "difficulty": "master",
+          "domain": "theoretical_neuroscience"
+        },
+        {
+          "id": "ch04_q5",
+          "query_en": "What optical imaging and patch-clamp recording studies directly measure BCS complex cell properties and FCS filling-in signals in layers 2/3 and 4?",
+          "query_ko": "2/3층과 4층에서 BCS 복합 세포 특성과 FCS 채움 신호를 직접 측정하는 광학 영상 및 패치-클램프 기록 연구는?",
+          "relevant_papers": [
+            "grossberg_crmb_ch04"
+          ],
+          "relevant_sections": [
+            "results",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "experimental_neuroscience"
         }
       ]
     },
     "5": {
       "name": "Learning to Attend",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch05_q1",
@@ -171,11 +345,54 @@
           ],
           "difficulty": "phd",
           "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch05_q3",
+          "query_en": "Derive the ART matching rule: match quality Q = |x ∧ w| / (α + |w|) and explain how it implements sequential hypothesis testing through orienting subsystem feedback.",
+          "query_ko": "ART 매칭 규칙 Q = |x ∧ w| / (α + |w|)를 유도하고 이것이 지향 부시스템 피드백을 통해 순차적 가설 검증을 어떻게 구현하는지 설명하라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch05"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch05_q4",
+          "query_en": "How does ART attentional top-down control and vigilance resemble Bayesian model comparison and posterior predictive checking in efficient inference?",
+          "query_ko": "ART 주의적 하향식 제어 및 경계가 효율적 추론에서 베이지안 모델 비교 및 사후 예측 검사를 어떻게 닮았는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch05"
+          ],
+          "relevant_sections": [
+            "discussion",
+            "applications"
+          ],
+          "difficulty": "master",
+          "domain": "theoretical_neuroscience"
+        },
+        {
+          "id": "ch05_q5",
+          "query_en": "What single-unit electrophysiology and fMRI studies measure attentional modulation and reset signals during learning and category discrimination tasks?",
+          "query_ko": "학습 및 범주 판별 과제 중 주의적 변조 및 리셋 신호를 측정하는 단일 단위 전기생리학 및 fMRI 연구는?",
+          "relevant_papers": [
+            "grossberg_crmb_ch05"
+          ],
+          "relevant_sections": [
+            "results",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "experimental_neuroscience"
         }
       ]
     },
     "6": {
       "name": "Conscious Seeing",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch06_q1",
@@ -204,11 +421,54 @@
           ],
           "difficulty": "phd",
           "domain": "systems_neuroscience"
+        },
+        {
+          "id": "ch06_q3",
+          "query_en": "Formulate the saliency-weighted feature integration mechanism in ARTSCAN and derive how attentional gain modulates recognition thresholds in a multi-scale hierarchical network.",
+          "query_ko": "ARTSCAN의 현저성-가중 특성 통합 메커니즘을 공식화하고 주의적 이득이 다중 스케일 계층 네트워크에서 인식 임계값을 어떻게 변조하는지 도출하라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch06"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch06_q4",
+          "query_en": "How does ARTSCAN's predictive coding of object category through top-down templates relate to sparse, multi-scale representations in the visual hierarchy?",
+          "query_ko": "ARTSCAN의 하향식 템플릿을 통한 객체 범주의 예측적 코딩이 시각 계층 구조의 희소, 다중 스케일 표현과 어떻게 관련되는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch06"
+          ],
+          "relevant_sections": [
+            "discussion",
+            "applications"
+          ],
+          "difficulty": "master",
+          "domain": "theoretical_neuroscience"
+        },
+        {
+          "id": "ch06_q5",
+          "query_en": "What neuroimaging evidence from fMRI, MEG, and binocular rivalry paradigms demonstrates surface-shroud resonances and consciousness-related activity in V4/IT/PPC?",
+          "query_ko": "V4/IT/PPC에서 표면-덮개 공명과 의식 관련 활동을 보여주는 fMRI, MEG, 양안경합 패러다임의 신경영상 증거는?",
+          "relevant_papers": [
+            "grossberg_crmb_ch06"
+          ],
+          "relevant_sections": [
+            "results",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "experimental_neuroscience"
         }
       ]
     },
     "7": {
       "name": "How Do We See a Changing World",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch07_q1",
@@ -237,11 +497,54 @@
           ],
           "difficulty": "phd",
           "domain": "sensory_neuroscience"
+        },
+        {
+          "id": "ch07_q3",
+          "query_en": "Describe the gated dipole equations: dX+/dt = -A_+X+ + (B+ - X+)S+ - (C+ + X+)X- and derive conditions for rebound and habituation dynamics.",
+          "query_ko": "게이트 쌍극 방정식 dX+/dt = -A_+X+ + (B+ - X+)S+ - (C+ + X+)X-를 기술하고 반동 및 습관화 역학의 조건을 도출하라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch07"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch07_q4",
+          "query_en": "How does the gated dipole's habituative transmitter dynamics implement metabolic efficiency and relate to predictive coding's error suppression during expected motion?",
+          "query_ko": "게이트 쌍극의 습관화 전달물질 역학이 대사 효율성을 구현하고 예상된 운동 중 예측적 코딩의 오류 억제와 어떻게 관련되는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch07"
+          ],
+          "relevant_sections": [
+            "discussion",
+            "applications"
+          ],
+          "difficulty": "master",
+          "domain": "theoretical_neuroscience"
+        },
+        {
+          "id": "ch07_q5",
+          "query_en": "What voltage-clamp and whole-cell recording studies demonstrate transmitter depletion, rebound excitation, and opponent color dynamics in horizontal cells and ON/OFF bipolar cells?",
+          "query_ko": "수평 세포 및 ON/OFF 쌍극 세포에서 전달물질 고갈, 반동 흥분, 길항 색상 역학을 보여주는 전압-클램프 및 전체 세포 기록 연구는?",
+          "relevant_papers": [
+            "grossberg_crmb_ch07"
+          ],
+          "relevant_sections": [
+            "results",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "experimental_neuroscience"
         }
       ]
     },
     "8": {
       "name": "Object Motion",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch08_q1",
@@ -270,11 +573,54 @@
           ],
           "difficulty": "phd",
           "domain": "sensory_neuroscience"
+        },
+        {
+          "id": "ch08_q3",
+          "query_en": "Mathematically formulate motion BCS directional selectivity using spatiotemporal receptive field convolutions and derive how motion direction signals coalesce to resolve the aperture problem.",
+          "query_ko": "시공간 수용장 합성곱을 사용하여 모션 BCS 방향 선택성을 수학적으로 공식화하고 운동 방향 신호가 개구부 문제를 해결하기 위해 어떻게 결집하는지 도출하라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch08"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch08_q4",
+          "query_en": "How does motion BCS directional selectivity emergence relate to sparse population coding and efficient motion representation in the speed-tuning hierarchy?",
+          "query_ko": "모션 BCS 방향 선택성 출현이 속도 튜닝 계층 구조에서 희소 모집단 코딩 및 효율적 운동 표현과 어떻게 관련되는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch08"
+          ],
+          "relevant_sections": [
+            "discussion",
+            "applications"
+          ],
+          "difficulty": "master",
+          "domain": "theoretical_neuroscience"
+        },
+        {
+          "id": "ch08_q5",
+          "query_en": "What two-photon calcium imaging and single-unit recording studies characterize motion opponency, directional selectivity columns, and velocity tuning across V1 and MT?",
+          "query_ko": "V1과 MT에 걸쳐 운동 길항, 방향 선택도 열, 속도 튜닝을 특징지으려는 이광자 칼슘 영상 및 단일 단위 기록 연구는?",
+          "relevant_papers": [
+            "grossberg_crmb_ch08"
+          ],
+          "relevant_sections": [
+            "results",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "experimental_neuroscience"
         }
       ]
     },
     "9": {
       "name": "Target Tracking",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch09_q1",
@@ -303,11 +649,54 @@
           ],
           "difficulty": "phd",
           "domain": "systems_neuroscience"
+        },
+        {
+          "id": "ch09_q3",
+          "query_en": "Derive the coupled attractor-repeller equations for target attraction dT/dt = -αT + βS_target - γ∑S_obstacles and analyze bifurcation structure for navigation robustness.",
+          "query_ko": "표적 끌개-반발자 방정식 dT/dt = -αT + βS_target - γ∑S_obstacles를 유도하고 항법 견고성을 위한 분기 구조를 분석하라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch09"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch09_q4",
+          "query_en": "How does STARS' multi-scale target salience and obstacle weighting implement metabolically efficient prioritization similar to sparse attention in the efficient brain?",
+          "query_ko": "STARS의 다중 스케일 표적 현저성 및 장애물 가중치가 효율적 뇌의 희소 주의와 유사한 대사 효율적 우선순위를 어떻게 구현하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch09"
+          ],
+          "relevant_sections": [
+            "discussion",
+            "applications"
+          ],
+          "difficulty": "master",
+          "domain": "theoretical_neuroscience"
+        },
+        {
+          "id": "ch09_q5",
+          "query_en": "What lesion studies in mouse superior colliculus and neuroimaging of human parietal cortex reveal steering command generation and obstacle-avoidance circuits?",
+          "query_ko": "마우스 상구흠제에서의 손상 연구 및 인간 두정엽의 신경영상이 조향 명령 생성 및 장애물 회피 회로를 어떻게 드러내는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch09"
+          ],
+          "relevant_sections": [
+            "results",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "experimental_neuroscience"
         }
       ]
     },
     "10": {
       "name": "Laminar Computing",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch10_q1",
@@ -336,11 +725,54 @@
           ],
           "difficulty": "phd",
           "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch10_q3",
+          "query_en": "Specify the LAMINART circuit: layer 6 → layer 4 feedforward, layer 4 → layers 2/3 convergence, layer 2/3 → layer 5 output, and layers 2/3↔5 feedback. Derive the laminar gain equation.",
+          "query_ko": "LAMINART 회로를 지정하라: 6층 → 4층 피드포워드, 4층 → 2/3층 수렴, 2/3층 → 5층 출력, 2/3층↔5층 피드백. 층상 이득 방정식을 도출하라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch10"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch10_q4",
+          "query_en": "How does the laminar canonical circuit's layer-specific connectivity implement multi-scale hierarchical processing and efficient sparse coding through layer 2/3 gain modulation?",
+          "query_ko": "층상 정규 회로의 층-특이적 연결이 2/3층 이득 변조를 통해 다중 스케일 계층 처리 및 효율적 희소 코딩을 어떻게 구현하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch10"
+          ],
+          "relevant_sections": [
+            "discussion",
+            "applications"
+          ],
+          "difficulty": "master",
+          "domain": "theoretical_neuroscience"
+        },
+        {
+          "id": "ch10_q5",
+          "query_en": "What layer-specific electrophysiology (patches to cortical columns), optogenetics, and laminar LFP/MUA recordings validate LAMINART's feedforward/feedback sequence and layer-specific gain control?",
+          "query_ko": "LAMINART의 피드포워드/피드백 순서 및 층-특이적 이득 제어를 검증하는 층-특이적 전기생리학(패치부터 피질 기둥까지), 광유전학, 층상 LFP/MUA 기록은?",
+          "relevant_papers": [
+            "grossberg_crmb_ch10"
+          ],
+          "relevant_sections": [
+            "results",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "experimental_neuroscience"
         }
       ]
     },
     "11": {
       "name": "World in Depth",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch11_q1",
@@ -369,11 +801,54 @@
           ],
           "difficulty": "phd",
           "domain": "sensory_neuroscience"
+        },
+        {
+          "id": "ch11_q3",
+          "query_en": "Derive the binocular disparity computation in FACADE: combine left/right BCS signals with binocular horizontal disparity tuning functions and show how depth-consistent resonances suppress figure-ground conflicts.",
+          "query_ko": "FACADE의 양안 시차 계산을 도출하라: 좌/우 BCS 신호를 양안 수평 시차 튜닝 함수와 결합하고 깊이-일관된 공명이 어떻게 전경-배경 충돌을 억제하는지 보여라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch11"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch11_q4",
+          "query_en": "How does FACADE's depth representation and multi-scale disparity tuning implement sparse, metabolically efficient 3D structure coding compared to population coding in visual system?",
+          "query_ko": "FACADE의 깊이 표현 및 다중 스케일 시차 튜닝이 시각 시스템의 모집단 코딩에 비해 희소, 대사 효율적 3D 구조 코딩을 어떻게 구현하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch11"
+          ],
+          "relevant_sections": [
+            "discussion",
+            "applications"
+          ],
+          "difficulty": "master",
+          "domain": "theoretical_neuroscience"
+        },
+        {
+          "id": "ch11_q5",
+          "query_en": "What fMRI, depth perception psychophysics, and neurophysiology of V2/V4 disparity-selective neurons confirm 3D shape reconstruction and figure-ground segregation in FACADE circuitry?",
+          "query_ko": "FACADE 회로의 3D 형태 재구성 및 전경-배경 분할을 확인하는 fMRI, 깊이 지각 심리물리학, V2/V4 시차-선택적 신경 신경생리학은?",
+          "relevant_papers": [
+            "grossberg_crmb_ch11"
+          ],
+          "relevant_sections": [
+            "results",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "experimental_neuroscience"
         }
       ]
     },
     "12": {
       "name": "Seeing, Hearing, Speaking",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch12_q1",
@@ -402,11 +877,54 @@
           ],
           "difficulty": "master",
           "domain": "systems_neuroscience"
+        },
+        {
+          "id": "ch12_q3",
+          "query_en": "Model multimodal integration in ARTSCAN: show how auditory stream segregation in cochlear nucleus maps to ventral stream and formulate cross-modal resonance equations for speech-visual binding.",
+          "query_ko": "ARTSCAN의 다중 양식 통합을 모델링하라: 달팽이관에서 청각 스트림 분할이 복측 경로에 어떻게 매핑되는지 보여주고 음성-시각 결합을 위한 교차-양식 공명 방정식을 공식화하라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch12"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch12_q4",
+          "query_en": "How do auditory cortex spectrotemporal receptive fields and visual IT sparse object representations implement complementary sparse coding for language and communication?",
+          "query_ko": "청각 피질 시공간 수용장 및 시각 IT 희소 객체 표현이 언어 및 통신을 위한 상보적 희소 코딩을 어떻게 구현하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch12"
+          ],
+          "relevant_sections": [
+            "discussion",
+            "applications"
+          ],
+          "difficulty": "master",
+          "domain": "theoretical_neuroscience"
+        },
+        {
+          "id": "ch12_q5",
+          "query_en": "What intracranial electrophysiology, fMRI during speech-visual tasks, and neuroimaging of the superior temporal sulcus reveal multimodal binding and language integration circuits?",
+          "query_ko": "음성-시각 과제 중 두개골 내 전기생리학, fMRI, 상측두고랑의 신경영상이 다중 양식 결합 및 언어 통합 회로를 어떻게 드러내는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch12"
+          ],
+          "relevant_sections": [
+            "results",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "experimental_neuroscience"
         }
       ]
     },
     "13": {
       "name": "From Knowing to Feeling",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch13_q1",
@@ -434,11 +952,54 @@
           ],
           "difficulty": "phd",
           "domain": "systems_neuroscience"
+        },
+        {
+          "id": "ch13_q3",
+          "query_en": "Formulate the CogEM opponent-process equations coupling cortical cognitive categories with amygdalar emotional values: dC/dt = -A_C C + (B_C - C)I_in + feedback_amygdala.",
+          "query_ko": "피질 인지 범주를 편도체 정서 값과 결합하는 CogEM 길항-과정 방정식을 공식화하라: dC/dt = -A_C C + (B_C - C)I_in + feedback_amygdala.",
+          "relevant_papers": [
+            "grossberg_crmb_ch13"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch13_q4",
+          "query_en": "How do CogEM imbalances in arousal and valence gating relate to mood disorders, anxiety, and depression through the lens of efficient emotional coding and metabolic constraint?",
+          "query_ko": "CogEM의 각성 및 가치가 유효성 불균형이 효율적 정서 코딩 및 대사 제약의 렌즈를 통해 기분 장애, 불안, 우울증과 어떻게 관련되는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch13"
+          ],
+          "relevant_sections": [
+            "discussion",
+            "clinical_applications"
+          ],
+          "difficulty": "master",
+          "domain": "clinical_neuroscience"
+        },
+        {
+          "id": "ch13_q5",
+          "query_en": "What fMRI and PET imaging of amygdala-prefrontal circuits, and psychiatric genetics studies, demonstrate CogEM-like imbalances in anxiety, depression, and PTSD?",
+          "query_ko": "편도체-전두엽 회로의 fMRI 및 PET 영상, 정신과 유전학 연구가 불안, 우울증, 외상 후 스트레스 장애의 CogEM-유사 불균형을 어떻게 보여주는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch13"
+          ],
+          "relevant_sections": [
+            "results",
+            "clinical_discussion"
+          ],
+          "difficulty": "master",
+          "domain": "clinical_neuroscience"
         }
       ]
     },
     "14": {
       "name": "Prefrontal Cortex",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch14_q1",
@@ -467,11 +1028,54 @@
           ],
           "difficulty": "phd",
           "domain": "systems_neuroscience"
+        },
+        {
+          "id": "ch14_q3",
+          "query_en": "Specify pART's hierarchical structure: dorsolateral PFC for goal representations, orbital PFC for value integration, and anterior cingulate for prediction error. Derive matching rules across layers.",
+          "query_ko": "pART의 계층 구조를 지정하라: 배측외측 전두엽은 목표 표현, 안와전두엽은 값 통합, 전대상피질은 예측 오류. 계층 간 매칭 규칙을 도출하라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch14"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch14_q4",
+          "query_en": "How does pART's hierarchical goal-value-prediction integration implement efficient decision-making and relate to predictive coding's hierarchical precision optimization in the prefrontal cortex?",
+          "query_ko": "pART의 계층적 목표-값-예측 통합이 효율적 의사결정을 구현하고 전두엽의 예측적 코딩의 계층적 정밀도 최적화와 어떻게 관련되는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch14"
+          ],
+          "relevant_sections": [
+            "discussion",
+            "applications"
+          ],
+          "difficulty": "master",
+          "domain": "theoretical_neuroscience"
+        },
+        {
+          "id": "ch14_q5",
+          "query_en": "What single-unit recordings from dorsal/ventral PFC, fMRI during decision-making and value-based tasks, and lesion studies demonstrate pART's goal-value hierarchies and prediction error circuits?",
+          "query_ko": "배측/복측 전두엽의 단일 단위 기록, 의사결정 및 값 기반 과제 중 fMRI, 손상 연구가 pART의 목표-값 계층과 예측 오류 회로를 어떻게 보여주는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch14"
+          ],
+          "relevant_sections": [
+            "results",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "experimental_neuroscience"
         }
       ]
     },
     "15": {
       "name": "Adaptively Timed",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch15_q1",
@@ -500,11 +1104,54 @@
           ],
           "difficulty": "phd",
           "domain": "systems_neuroscience"
+        },
+        {
+          "id": "ch15_q3",
+          "query_en": "Model spectral timing as a tapped delay-line with basis functions: φ_k(t) = exp(-(t-t_k)²/σ²). Derive how conjunctive hippocampal cells form temporal composites and solve the temporal credit assignment problem.",
+          "query_ko": "스펙트럼 타이밍을 기저 함수가 있는 탭 지연선으로 모델링하라: φ_k(t) = exp(-(t-t_k)²/σ²). 결합 해마 세포가 어떻게 시간적 복합물을 형성하고 시간적 신용 할당 문제를 해결하는지 도출하라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch15"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch15_q4",
+          "query_en": "How does nSTART's BDNF-dependent consolidation gate relate to sparse, efficient temporal code compression and metabolic constraints on memory acquisition speed?",
+          "query_ko": "nSTART의 BDNF 의존적 공고화 게이트가 희소, 효율적 시간 코드 압축 및 기억 획득 속도에 대한 대사 제약과 어떻게 관련되는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch15"
+          ],
+          "relevant_sections": [
+            "discussion",
+            "applications"
+          ],
+          "difficulty": "master",
+          "domain": "theoretical_neuroscience"
+        },
+        {
+          "id": "ch15_q5",
+          "query_en": "What hippocampal place cell and grid cell recordings, BDNF knock-in/knockout mouse studies, and clinical timing deficits in autism spectrum disorder validate spectral timing and nSTART mechanisms?",
+          "query_ko": "해마 장소 세포 및 격자 세포 기록, BDNF knock-in/knockout 마우스 연구, 자폐 스펙트럼 장애의 임상 타이밍 결손이 스펙트럼 타이밍 및 nSTART 메커니즘을 어떻게 검증하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch15"
+          ],
+          "relevant_sections": [
+            "results",
+            "clinical_discussion"
+          ],
+          "difficulty": "master",
+          "domain": "experimental_neuroscience"
         }
       ]
     },
     "16": {
       "name": "Learning Maps",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch16_q1",
@@ -533,11 +1180,54 @@
           ],
           "difficulty": "phd",
           "domain": "systems_neuroscience"
+        },
+        {
+          "id": "ch16_q3",
+          "query_en": "Derive the SOVEREIGN self-organizing map learning rule: Δw_ij = η x_i w_j (with Mexican-hat neighborhood). Show how grid cell periodic responses emerge from competitive learning on toroidal topology.",
+          "query_ko": "SOVEREIGN 자기 조직화 지도 학습 규칙을 도출하라: Δw_ij = η x_i w_j (Mexican-hat 이웃 포함). 격자 세포 주기적 반응이 원환 위상의 경쟁 학습에서 어떻게 나타나는지 보여라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch16"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch16_q4",
+          "query_en": "How do SOVEREIGN's grid-place cell sparse representation and ART-based place cell matching implement metabolically efficient spatial navigation and relate to population coding?",
+          "query_ko": "SOVEREIGN의 격자-장소 세포 희소 표현 및 ART 기반 장소 세포 매칭이 대사 효율적 공간 항법을 어떻게 구현하고 모집단 코딩과 관련되는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch16"
+          ],
+          "relevant_sections": [
+            "discussion",
+            "applications"
+          ],
+          "difficulty": "master",
+          "domain": "theoretical_neuroscience"
+        },
+        {
+          "id": "ch16_q5",
+          "query_en": "What single-unit recordings of grid and place cells in virtual reality, optogenetic silencing of MEC grid cells, and navigation learning paradigms validate SOVEREIGN and catastrophic forgetting prevention?",
+          "query_ko": "가상 현실의 격자 및 장소 세포의 단일 단위 기록, MEC 격자 세포의 광유전학적 침묵, 항법 학습 패러다임이 SOVEREIGN 및 치명적 망각 방지를 어떻게 검증하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch16"
+          ],
+          "relevant_sections": [
+            "results",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "experimental_neuroscience"
         }
       ]
     },
     "17": {
       "name": "Universal Developmental Code",
+      "num_queries": 5,
       "queries": [
         {
           "id": "ch17_q1",
@@ -566,6 +1256,48 @@
           ],
           "difficulty": "phd",
           "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch17_q3",
+          "query_en": "Formalize the universal developmental code as a constraint optimization: minimize energy E = ||x - w||² + λ||w||₁ subject to stability-plasticity trade-off. Show how this unifies neural and non-neural systems.",
+          "query_ko": "보편적 발달 코드를 제약 최적화로 형식화하라: E = ||x - w||² + λ||w||₁ 최소화를 안정성-가소성 트레이드오프에 따라 최소화하라. 이것이 신경 및 비신경 시스템을 어떻게 통합하는지 보여라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch17"
+          ],
+          "relevant_sections": [
+            "methods",
+            "mathematical_formulation"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch17_q4",
+          "query_en": "How does the universal developmental code's balance of stability (vigilance), plasticity (learning), and sparsity relate to efficient coding theory, metabolic constraints, and information theory?",
+          "query_ko": "보편적 발달 코드의 안정성(경계), 가소성(학습), 희소성 균형이 효율적 코딩 이론, 대사 제약, 정보 이론과 어떻게 관련되는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch17"
+          ],
+          "relevant_sections": [
+            "discussion",
+            "theoretical_synthesis"
+          ],
+          "difficulty": "master",
+          "domain": "theoretical_neuroscience"
+        },
+        {
+          "id": "ch17_q5",
+          "query_en": "What developmental psychology studies (infants learning categories), comparative neuroscience across species, and physics simulations of self-organizing criticality validate the universal developmental code?",
+          "query_ko": "영아의 범주 학습(발달 심리학), 종 간 비교 신경과학, 자기 조직화 임계성의 물리학 시뮬레이션이 보편적 발달 코드를 어떻게 검증하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch17"
+          ],
+          "relevant_sections": [
+            "results",
+            "broad_implications"
+          ],
+          "difficulty": "master",
+          "domain": "interdisciplinary"
         }
       ]
     }

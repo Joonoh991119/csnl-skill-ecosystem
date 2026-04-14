@@ -261,6 +261,100 @@ These queries test core concept understanding and enable ground-truth evaluation
 
 ---
 
+## 8. Ambiguous Term Disambiguation
+
+Polysemous terms require domain-specific interpretation across EC and CRMB:
+
+| Term | Efficient Coding Meaning | CRMB Meaning | Context |
+|------|-------------------------|--------------|---------|
+| **adaptation** | Neural adaptation / gain control; stimulus-dependent threshold changes | ART adaptive weights; learned connection strengths | EC: temporal dynamics; CRMB: learning mechanism |
+| **prediction** | Predictive coding error minimization; top-down model prediction | ART top-down template matching | EC: hierarchical inference; CRMB: match-mismatch detection |
+| **efficiency** | Metabolic efficiency / information efficiency; maximizing information per ATP | Computational parsimony; minimal encoding for category | EC: energy-information tradeoff; CRMB: learning economy |
+| **resonance** | Not used in EC literature | Adaptive Resonance Theory (ART); stable learning state | CRMB-specific; indicates successful match between bottom-up and top-down signals |
+| **coding** | Neural coding scheme; representation of stimuli in spikes | Category learning / ART coding; unsupervised categorization | EC: sensory representation; CRMB: category formation |
+
+### Korean Disambiguations
+- **적응 (adaptation)**: 신경적응 (neural adaptation, EC) vs ART적응가중치 (ART adaptive weights, CRMB)
+- **예측 (prediction)**: 예측 오차 최소화 (prediction error minimization, EC) vs ART 하향식 템플릿 (ART top-down template, CRMB)
+- **효율성 (efficiency)**: 대사 효율성 (metabolic efficiency, EC) vs 계산 절약 (computational parsimony, CRMB)
+- **공명 (resonance)**: EC에서 미사용 vs 적응 공명 이론 (Adaptive Resonance Theory, CRMB)
+- **부호화 (coding)**: 신경 부호화 체계 (neural coding scheme, EC) vs 범주 학습 (category learning, CRMB)
+
+---
+
+## 9. Bridge Validation Status
+
+Cross-domain bridges between EC and CRMB are classified by empirical support level:
+
+| Bridge | Status | Evidence/Justification |
+|--------|--------|------------------------|
+| **ART vigilance ↔ Fisher information** | THEORETICAL | Plausible connection between vigilance threshold (controls category merge/split) and Fisher information (measures parameter sensitivity), but no direct empirical validation in literature |
+| **BCS orientation columns ↔ sparse basis functions** | VALIDATED | Olshausen & Field (1996) sparse coding matches V1 simple cell receptive fields; Grossberg BCS explains columnar organization of orientation selectivity; convergent evidence from multiple studies |
+| **Predictive coding ↔ ART top-down templates** | THEORETICAL | Both frameworks feature top-down predictions and error-driven learning; ART vigilance parallels prediction error thresholding, but formal equivalence remains unproven |
+| **Population coding ↔ BCS distributed representation** | VALIDATED | Pouget, Dayan & Zemel (2000) population coding principles directly apply to BCS feature maps; supported by neurophysiological recordings in sensory cortex |
+| **Metabolic efficiency ↔ LAMINART laminar structure** | SPECULATIVE | Logical link between energy constraints and layered architecture (minimizes long-range connections), but quantitative validation of metabolic savings is limited |
+
+**Validation Criteria**:
+- **VALIDATED**: Direct empirical evidence from peer-reviewed studies; multiple independent replications or convergent evidence
+- **THEORETICAL**: Mechanistically plausible with consistent frameworks; lacks direct empirical validation but supported by domain logic
+- **SPECULATIVE**: Hypothetical connection; qualitative reasoning only; requires empirical investigation
+
+---
+
+## 10. Notation Conflict Resolution
+
+Shared mathematical symbols carry domain-specific meanings that must be disambiguated during cross-domain integration:
+
+| Symbol | EC Usage | CRMB Usage | Resolution Strategy |
+|--------|----------|-----------|-------------------  |
+| **ρ (rho)** | Correlation or redundancy measure (Barlow redundancy reduction) | Sometimes used for attention weight or gain parameter | Prefix with context: ρ_redundancy vs ρ_gain; specify in equation caption |
+| **σ (sigma)** | Standard deviation or noise variance (information-theoretic context) | May denote sigmoid activation or sensitivity parameter | Use descriptive subscripts: σ_noise (EC) vs σ_activation (CRMB) |
+| **x_i** | Stimulus input or feature value at position i (EC) | Activation of node i in ART layer (CRMB) | Distinguish via context notation: x_i^stimulus vs x_i^activation |
+| **Δ (delta)** | Change or difference operator; prediction error in hierarchical model | Weight change or learning increment | Explicit subscripting: ΔError (EC) vs ΔW (CRMB) |
+| **λ (lambda)** | Lagrange multiplier (information-theoretic optimization) or wavelength (spatial filtering) | May denote learning rate or decay parameter in CRMB contexts | Context-dependent; always define in equation notation section |
+
+**Best Practice**: When integrating EC and CRMB equations, prepend domain labels to variables:
+- `x_i^EC` for EC input; `x_i^CRMB` for CRMB node activation
+- `e_EC` for prediction error (EC); `e_CRMB` for vigilance mismatch (CRMB)
+- Document all notation in unified glossary at paper/section top
+
+---
+
+## 11. Missing Concepts: Information-Theoretic Extensions
+
+The concept graph should include these foundational theories that bridge EC and rate-distortion analysis:
+
+### Information Bottleneck Principle
+- **Definition**: Fundamental tradeoff between compression (minimizing information about input) and fidelity (maintaining information about target output)
+- **EC connection**: Sparse coding achieves bottleneck by transmitting only necessary features; complements redundancy reduction
+- **CRMB connection**: ART categories form information bottleneck for input simplification while preserving behavioral relevance
+- **Key reference**: Tishby & Schwartz-Ziv (2015) "Opening the black box of deep neural networks via information"
+
+### Rate-Distortion Theory
+- **Definition**: Mathematical framework relating compression rate (bits transmitted) to acceptable distortion (reconstruction error)
+- **EC foundation**: Lossy compression under metabolic constraints; justifies why some information can be discarded
+- **Application**: Explains tradeoff between sparse coding (low rate) and reconstruction fidelity (low distortion)
+- **Key reference**: Cover & Thomas (2006) *Elements of Information Theory*; Blahut (1972) rate-distortion algorithm
+
+### Concept Graph Children Update
+```json
+{
+  "efficient_coding": {
+    "children": [
+      "sparse_coding",
+      "population_coding",
+      "predictive_coding",
+      "redundancy_reduction",
+      "metabolic_efficiency",
+      "information_bottleneck",
+      "rate_distortion_theory"
+    ]
+  }
+}
+```
+
+---
+
 ## Implementation Checklist for Tutor Integration
 
 - [ ] Load concept_graph.json for efficient coding domain

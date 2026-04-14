@@ -336,6 +336,529 @@ class EfficientCodingDomain:
         return builder
 ```
 
+## Robustness & Edge Cases
+
+Production ontology systems must handle cycles, orphans, multi-hop complexity, diverse query patterns, and multilingual data. This section adds essential robustness features.
+
+### 1. Cycle Detection & Reporting
+
+Identify circular dependencies in the concept graph using depth-first search with back-edge detection:
+
+```python
+class CycleDetector:
+    """Detect and report cycles in the ontology graph."""
+    
+    def __init__(self, graph):
+        self.graph = graph
+        self.cycles = []
+    
+    def detect_cycles(self) -> List[List[str]]:
+        """
+        Find all cycles using DFS with back-edge detection.
+        Returns: List of cycle paths, e.g., [['A', 'B', 'C', 'A'], ['X', 'Y', 'X']]
+        """
+        visited = set()
+        rec_stack = set()
+        parent_map = {}
+        
+        def dfs(node, path):
+            visited.add(node)
+            rec_stack.add(node)
+            path.append(node)
+            
+            for neighbor in self.graph.successors(node):
+                if neighbor not in visited:
+                    parent_map[neighbor] = node
+                    dfs(neighbor, path[:])
+                elif neighbor in rec_stack:
+                    # Back edge found: cycle detected
+                    cycle_start_idx = path.index(neighbor)
+                    cycle = path[cycle_start_idx:] + [neighbor]
+                    if cycle not in self.cycles:
+                        self.cycles.append(cycle)
+            
+            rec_stack.remove(node)
+        
+        for node in self.graph.nodes():
+            if node not in visited:
+                dfs(node, [])
+        
+        return self.cycles
+    
+    def report_cycles_to_user(self) -> str:
+        """Format cycles as readable warnings for user display."""
+        if not self.cycles:
+            return "✓ No cycles detected. Ontology is acyclic."
+        
+        report = f"⚠ Found {len(self.cycles)} cycle(s):\n"
+        for i, cycle in enumerate(self.cycles, 1):
+            path_str = " → ".join(cycle)
+            report += f"  Cycle {i}: {path_str}\n"
+        
+        report += "\nRecommendation: Review these relations and remove edges to break cycles.\n"
+        return report
+```
+
+### 2. Orphan Node Handling
+
+Identify disconnected concepts and apply strategies for handling them:
+
+```python
+class OrphanNodeHandler:
+    """Find and handle disconnected concepts in the ontology."""
+    
+    STRATEGIES = ["warn", "auto_connect_to_root", "exclude_with_log"]
+    
+    def __init__(self, graph, root_nodes=None):
+        self.graph = graph
+        self.root_nodes = root_nodes or ["ART", "BCS/FCS", "LAMINART"]
+        self.orphans = []
+    
+    def find_orphan_nodes(self) -> List[str]:
+        """
+        Identify nodes with no incoming or outgoing edges.
+        Returns: List of orphan node names
+        """
+        self.orphans = []
+        for node in self.graph.nodes():
+            in_degree = self.graph.in_degree(node)
+            out_degree = self.graph.out_degree(node)
+            
+            # Orphan: no connections at all, or only self-loops
+            if in_degree + out_degree == 0:
+                self.orphans.append(node)
+        
+        return self.orphans
+    
+    def handle_orphans(self, strategy: str = "warn") -> Dict:
+        """
+        Apply strategy to orphan nodes.
+        Strategies:
+          - 'warn': Log warnings for orphans (no modification)
+          - 'auto_connect_to_root': Connect orphans to nearest root
+          - 'exclude_with_log': Remove orphans and log them
+        """
+        if strategy not in self.STRATEGIES:
+            raise ValueError(f"Unknown strategy: {strategy}")
+        
+        self.find_orphan_nodes()
+        report = {"strategy": strategy, "orphans": self.orphans, "actions": []}
+        
+        if strategy == "warn":
+            for orphan in self.orphans:
+                report["actions"].append(f"WARNING: {orphan} is disconnected")
+        
+        elif strategy == "auto_connect_to_root":
+            for orphan in self.orphans:
+                # Connect to nearest root node
+                target_root = self.root_nodes[0] if self.root_nodes else "ROOT"
+                self.graph.add_edge(orphan, target_root, relation="connects_to_root", auto=True)
+                report["actions"].append(f"Auto-connected {orphan} → {target_root}")
+        
+        elif strategy == "exclude_with_log":
+            for orphan in self.orphans:
+                self.graph.remove_node(orphan)
+                report["actions"].append(f"Removed orphan: {orphan}")
+        
+        return report
+```
+
+### 3. Multi-Hop Query Optimization
+
+Traverse the graph with deduplication and relevance decay:
+
+```python
+class MultiHopQueryOptimizer:
+    """Optimize multi-hop traversal with deduplication and relevance scoring."""
+    
+    def __init__(self, graph):
+        self.graph = graph
+    
+    def multi_hop_query(self, start_concept: str, max_hops: int = 3) -> Dict:
+        """
+        Traverse graph up to max_hops, deduplicating results.
+        Relevance scores decay with hop distance: score *= 0.8^hop
+        """
+        result = {
+            "start": start_concept,
+            "max_hops": max_hops,
+            "by_hop": {},
+            "all_reached": {},
+        }
+        
+        visited = {start_concept}  # Deduplication set
+        current_level = [(start_concept, 1.0)]  # (node, relevance_score)
+        
+        for hop in range(1, max_hops + 1):
+            next_level = []
+            hop_results = []
+            
+            for node, score in current_level:
+                for successor in self.graph.successors(node):
+                    if successor not in visited:
+                        # Decay score: multiply by 0.8 per hop
+                        new_score = score * (0.8 ** hop)
+                        visited.add(successor)
+                        next_level.append((successor, new_score))
+                        hop_results.append({
+                            "node": successor,
+                            "score": float(new_score),
+                            "source": node
+                        })
+                        # Store in consolidated result
+                        if successor not in result["all_reached"]:
+                            result["all_reached"][successor] = new_score
+                        else:
+                            result["all_reached"][successor] = max(result["all_reached"][successor], new_score)
+            
+            result["by_hop"][hop] = hop_results
+            current_level = next_level
+            
+            if not current_level:
+                break
+        
+        # Sort consolidated results by score
+        result["ranked"] = sorted(
+            result["all_reached"].items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+        
+        return result
+```
+
+### 4. SPARQL-like Boolean Queries
+
+Support complex query logic with AND/OR/NOT operators:
+
+```python
+class OntologyQuery:
+    """SPARQL-like query engine for ontology traversal with boolean logic."""
+    
+    def __init__(self, graph):
+        self.graph = graph
+    
+    def AND(self, *relations: str) -> List[str]:
+        """Return nodes satisfying ALL relation types."""
+        if not relations:
+            return list(self.graph.nodes())
+        
+        # Start with nodes matching first relation
+        candidates = set()
+        for node in self.graph.nodes():
+            for successor in self.graph.successors(node):
+                edge = self.graph[node][successor]
+                if edge.get("relation") == relations[0]:
+                    candidates.add(successor)
+        
+        # Filter by remaining relations
+        for relation in relations[1:]:
+            filtered = set()
+            for node in candidates:
+                for successor in self.graph.successors(node):
+                    edge = self.graph[node][successor]
+                    if edge.get("relation") == relation:
+                        filtered.add(successor)
+            candidates = filtered
+        
+        return list(candidates)
+    
+    def OR(self, *relations: str) -> List[str]:
+        """Return nodes satisfying ANY relation type."""
+        candidates = set()
+        for node in self.graph.nodes():
+            for successor in self.graph.successors(node):
+                edge = self.graph[node][successor]
+                if edge.get("relation") in relations:
+                    candidates.add(successor)
+        return list(candidates)
+    
+    def NOT(self, relation: str) -> List[str]:
+        """Return nodes NOT connected via the specified relation."""
+        all_nodes = set(self.graph.nodes())
+        excluded = set()
+        
+        for node in self.graph.nodes():
+            for successor in self.graph.successors(node):
+                edge = self.graph[node][successor]
+                if edge.get("relation") == relation:
+                    excluded.add(successor)
+        
+        return list(all_nodes - excluded)
+    
+    def path(self, start: str, end: str, max_hops: int = 3) -> List[List[str]]:
+        """Find all paths from start to end within max_hops."""
+        paths = []
+        
+        def dfs(current, target, visited, path):
+            if len(path) > max_hops:
+                return
+            if current == target:
+                paths.append(path[:])
+                return
+            
+            for successor in self.graph.successors(current):
+                if successor not in visited:
+                    visited.add(successor)
+                    path.append(successor)
+                    dfs(successor, target, visited, path)
+                    path.pop()
+                    visited.remove(successor)
+        
+        visited = {start}
+        dfs(start, end, visited, [start])
+        return paths
+```
+
+### 5. Korean Ontology Support
+
+Add bilingual (English-Korean) relation types for CRMB translation:
+
+```python
+class BilingualOntology:
+    """Support bilingual ontology construction and traversal."""
+    
+    KOREAN_RELATION_TYPES = {
+        "is_a": "~이다",
+        "part_of": "~의 일부",
+        "causes": "~를 야기한다",
+        "relates_to": "~와 관련",
+        "comprises": "~를 포함",
+        "implements": "~를 구현",
+        "shares_principle": "~와 원리 공유",
+    }
+    
+    KOREAN_CONCEPTS = {
+        "ART": "적응 공명 이론",
+        "BCS/FCS": "경계 윤곽 시스템 / 특성 윤곽 시스템",
+        "LAMINART": "층상 자동화 신경망 기술",
+        "sparse_coding": "희소 부호화",
+        "predictive_coding": "예측 부호화",
+    }
+    
+    def __init__(self, graph):
+        self.graph = graph
+        self.bilingual_metadata = {}
+    
+    def build_bilingual_ontology(self) -> Dict:
+        """
+        Annotate existing ontology with Korean translations.
+        Returns: Dictionary mapping nodes to {en: name, ko: name, relations_ko: {...}}
+        """
+        for node in self.graph.nodes():
+            en_name = node
+            ko_name = self.KOREAN_CONCEPTS.get(node, self._translate_to_korean(node))
+            
+            self.bilingual_metadata[node] = {
+                "en": en_name,
+                "ko": ko_name,
+                "relations_en": {},
+                "relations_ko": {},
+            }
+            
+            # Annotate outgoing relations
+            for successor in self.graph.successors(node):
+                edge = self.graph[node][successor]
+                relation_type = edge.get("relation", "related")
+                
+                en_rel = relation_type
+                ko_rel = self.KOREAN_RELATION_TYPES.get(relation_type, relation_type)
+                
+                self.bilingual_metadata[node]["relations_en"][successor] = en_rel
+                self.bilingual_metadata[node]["relations_ko"][successor] = ko_rel
+        
+        return self.bilingual_metadata
+    
+    def _translate_to_korean(self, english_term: str) -> str:
+        """
+        Simple fallback translation (in production, use Google Translate API).
+        """
+        # Replace underscores with spaces and titlecase
+        return english_term.replace("_", " ").title()
+    
+    def format_korean_report(self) -> str:
+        """Generate bilingual query report."""
+        report = "=== 양언어 온톨로지 (Bilingual Ontology) ===\n"
+        for node, metadata in self.bilingual_metadata.items():
+            report += f"\n[{node} | {metadata['ko']}]\n"
+            for target, rel in metadata["relations_en"].items():
+                ko_rel = metadata["relations_ko"].get(target, rel)
+                report += f"  {rel} | {ko_rel} → {target}\n"
+        return report
+```
+
+### 6. NLP-based Relation Extraction
+
+Guidance for advanced extraction beyond regex patterns:
+
+```python
+class NLPRelationExtractor:
+    """
+    Extract relations using NLP models (spaCy, KoNLPy) for accuracy beyond regex.
+    
+    Example dependencies:
+    - pip install spacy
+    - python -m spacy download en_core_web_sm
+    - pip install konlpy
+    """
+    
+    def __init__(self, lang: str = "en"):
+        """
+        Initialize NLP extractor.
+        lang: 'en' for spaCy, 'ko' for KoNLPy
+        """
+        self.lang = lang
+        if lang == "en":
+            import spacy
+            self.nlp = spacy.load("en_core_web_sm")
+        elif lang == "ko":
+            from konlpy.tag import Okt
+            self.nlp = Okt()
+    
+    def extract_relations_spacy(self, text: str) -> List[Dict]:
+        """
+        Extract relations using spaCy's dependency parsing.
+        Looks for SVO (Subject-Verb-Object) patterns.
+        
+        Example:
+        "ART is a learning mechanism" →
+        {"subject": "ART", "verb": "is", "object": "learning mechanism", "relation": "is_a"}
+        """
+        doc = self.nlp(text)
+        relations = []
+        
+        for token in doc:
+            # Look for copula "is" or "are"
+            if token.lemma_ in ["be", "is"]:
+                # Subject: left-dependent noun
+                subject = None
+                for child in token.head.children:
+                    if child.dep_ == "nsubj":
+                        subject = child.text
+                        break
+                
+                # Object: right-dependent noun (via attr)
+                obj = None
+                for child in token.children:
+                    if child.dep_ == "attr":
+                        obj = child.text
+                        break
+                
+                if subject and obj:
+                    relations.append({
+                        "subject": subject,
+                        "relation": "is_a",
+                        "object": obj,
+                        "confidence": 0.9,
+                    })
+        
+        return relations
+    
+    def extract_relations_konlpy(self, text: str) -> List[Dict]:
+        """
+        Extract relations from Korean text using KoNLPy.
+        Looks for 이다 (is) and 포함 (comprises) patterns.
+        
+        Example:
+        "ART는 적응 공명 이론이다" →
+        {"subject": "ART", "relation": "is_a", "object": "적응 공명 이론"}
+        """
+        # Tokenize and tag
+        pos_tagged = self.nlp.pos(text)
+        relations = []
+        
+        # Simple pattern: Noun + 이다 → is_a relation
+        for i, (word, pos) in enumerate(pos_tagged):
+            if pos.startswith("VV") and word in ["이다", "이"]:
+                # Collect preceding nouns as subject
+                subject_tokens = []
+                for j in range(i - 1, -1, -1):
+                    prev_word, prev_pos = pos_tagged[j]
+                    if prev_pos.startswith("N"):
+                        subject_tokens.insert(0, prev_word)
+                    elif prev_pos.startswith("J"):  # josa (particle)
+                        break
+                
+                # Collect following nouns as object
+                obj_tokens = []
+                for j in range(i + 1, len(pos_tagged)):
+                    next_word, next_pos = pos_tagged[j]
+                    if next_pos.startswith("N"):
+                        obj_tokens.append(next_word)
+                    elif next_pos.startswith("J"):
+                        break
+                
+                if subject_tokens and obj_tokens:
+                    relations.append({
+                        "subject": "".join(subject_tokens),
+                        "relation": "is_a",
+                        "object": "".join(obj_tokens),
+                        "confidence": 0.85,
+                        "language": "ko",
+                    })
+        
+        return relations
+    
+    @staticmethod
+    def example_usage():
+        """Show how to use NLP extraction in production."""
+        extractor_en = NLPRelationExtractor(lang="en")
+        extractor_ko = NLPRelationExtractor(lang="ko")
+        
+        # English example
+        text_en = "Boundary Contour System is a neural pathway in visual cortex."
+        relations_en = extractor_en.extract_relations_spacy(text_en)
+        
+        # Korean example
+        text_ko = "경계윤곽시스템은 시각피질의 신경경로이다"
+        relations_ko = extractor_ko.extract_relations_konlpy(text_ko)
+        
+        return {
+            "en": relations_en,
+            "ko": relations_ko,
+        }
+```
+
+### Usage Example: Robustness Checks
+
+```python
+# Initialize with robustness features
+builder = OntologyBuilder()
+builder.add_chapter("ART", chapter_text)
+
+# 1. Check for cycles
+cycle_detector = CycleDetector(builder.graph)
+cycles = cycle_detector.detect_cycles()
+print(cycle_detector.report_cycles_to_user())
+
+# 2. Handle orphans
+orphan_handler = OrphanNodeHandler(builder.graph)
+report = orphan_handler.handle_orphans(strategy="auto_connect_to_root")
+print(f"Orphan handling: {report}")
+
+# 3. Multi-hop with deduplication
+optimizer = MultiHopQueryOptimizer(builder.graph)
+expanded = optimizer.multi_hop_query("BCS_boundary_completion", max_hops=3)
+print(f"Reached concepts: {expanded['ranked'][:5]}")
+
+# 4. Boolean queries
+query_engine = OntologyQuery(builder.graph)
+is_a_nodes = query_engine.AND("is_a")
+is_a_or_part = query_engine.OR("is_a", "part_of")
+paths = query_engine.path("ART", "sparse_coding", max_hops=4)
+
+# 5. Korean support
+bilingual = BilingualOntology(builder.graph)
+bilingual.build_bilingual_ontology()
+print(bilingual.format_korean_report())
+
+# 6. NLP extraction
+extractor = NLPRelationExtractor(lang="en")
+text = "Predictive coding is a subset of efficient coding theory."
+relations = extractor.extract_relations_spacy(text)
+print(f"Extracted: {relations}")
+```
+
 ## Example Usage
 
 ```python

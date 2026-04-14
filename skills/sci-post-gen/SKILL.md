@@ -266,6 +266,425 @@ class QualityScorer:
         return suggestions
 ```
 
+## Robustness & Edge Cases
+
+### 1. Cross-Domain Post Orchestration
+
+Add `generate_cross_domain_post()` function for unified CRMB + Efficient Coding compositions:
+
+```python
+def generate_cross_domain_post(crmb_concept: str, ec_concept: str, 
+                              bridge_type: str, format: str = "blog") -> Dict:
+    """
+    Generate unified post bridging CRMB and Efficient Coding domains.
+    
+    Args:
+        crmb_concept: CRMB topic (e.g., "ART vigilance", "BCS attention")
+        ec_concept: Efficient Coding topic (e.g., "sparse coding", "population coding")
+        bridge_type: Connection type ("convergence"|"analogy"|"integration")
+        format: Output format ("blog"|"thread"|"newsletter"|"academic")
+    
+    Returns:
+        Dict with 'content', 'citations', 'equations', 'figure_requests'
+    """
+    # 1. Retrieve CRMB context via rag-pipeline
+    crmb_context = rag_pipeline.retrieve(f"CRMB {crmb_concept}", top_k=5)
+    crmb_citations = extract_citations(crmb_context)
+    
+    # 2. Retrieve EC context via rag-pipeline
+    ec_context = rag_pipeline.retrieve(f"Efficient Coding {ec_concept}", top_k=5)
+    ec_citations = extract_citations(ec_context)
+    
+    # 3. Identify bridge from efficient-coding-domain bridges
+    bridge_mapping = {
+        "ART": ["sparse coding", "population coding"],
+        "BCS/FCS": ["distributed coding", "feature selectivity"],
+        "LAMINART": ["hierarchical compression", "efficient representations"]
+    }
+    bridge = get_bridge_narrative(bridge_type, crmb_concept, ec_concept)
+    
+    # 4. Generate unified narrative with both citations
+    unified_post = generate_template(format)
+    unified_post.add_section("CRMB Context", crmb_context, crmb_citations)
+    unified_post.add_section("Efficient Coding Context", ec_context, ec_citations)
+    unified_post.add_section("Unified Bridge", bridge, 
+                           citations=[*crmb_citations, *ec_citations])
+    
+    # 5. Validate no hallucination (check ALLOWED_CLAIMS)
+    all_claims = extract_claims(unified_post.content)
+    for claim in all_claims:
+        if claim not in ALLOWED_CLAIMS:
+            unified_post.flag_claim(claim, "[NEEDS_VERIFICATION]")
+    
+    return {
+        'content': unified_post.render(),
+        'citations': unified_post.citations,
+        'equations': unified_post.equations,
+        'figure_requests': identify_figure_needs(unified_post.content),
+        'validation_status': verify_post(unified_post)
+    }
+```
+
+### 2. Equation Rendering Validation
+
+Add `validate_equation_rendering()` for LaTeX safety and fallback handling:
+
+```python
+def validate_equation_rendering(equations: List[str]) -> Dict[str, List]:
+    """
+    Pre-check LaTeX syntax and test rendering modes.
+    
+    Args:
+        equations: List of equations in LaTeX format
+    
+    Returns:
+        Dict with 'valid_equations', 'failed_equations', 'fallbacks'
+    """
+    valid = []
+    failed = []
+    fallbacks = []
+    
+    for eq in equations:
+        # Test inline mode ($...$)
+        try:
+            inline_result = test_quarto_render(f"${eq}$")
+            valid.append({'equation': eq, 'mode': 'inline'})
+        except LatexError as e:
+            # Test display mode ($$...$$)
+            try:
+                display_result = test_quarto_render(f"$${eq}$$")
+                valid.append({'equation': eq, 'mode': 'display'})
+            except LatexError:
+                # Fallback: render as PNG image
+                try:
+                    png_path = render_equation_as_png(eq)
+                    fallbacks.append({
+                        'equation': eq,
+                        'fallback': 'png_image',
+                        'path': png_path,
+                        'error': str(e)
+                    })
+                    failed.append(eq)
+                except Exception as png_error:
+                    failed.append(eq)
+    
+    # Korean label support for equation descriptions
+    for item in valid:
+        item['korean_label'] = get_korean_label(item['equation'])
+    
+    return {
+        'valid_equations': valid,
+        'failed_equations': failed,
+        'fallbacks': fallbacks,
+        'render_safe': len(failed) == 0
+    }
+```
+
+### 3. Korean Audience Adaptation
+
+Add `adapt_for_korean_audience()` for cultural and linguistic customization:
+
+```python
+def adapt_for_korean_audience(post_content: str, academic_level: str = "grad") -> str:
+    """
+    Adapt content for Korean academic audience with cultural context.
+    
+    Args:
+        post_content: Original post content
+        academic_level: "undergrad"|"grad"|"researcher"
+    
+    Returns:
+        Adapted content with Korean institutional references and conventions
+    """
+    adapted = post_content
+    
+    # 1. Cultural context references
+    # Replace generic examples with Korean institutions
+    institution_mapping = {
+        'Stanford': 'Stanford (스탠포드)',
+        'MIT': 'MIT (매사추세츠 공과대학)',
+        'example university': 'KAIST (한국과학기술원)',
+        'research lab': 'SNU BrainLab (서울대 뇌과학 연구실)'
+    }
+    
+    for generic, korean_ref in institution_mapping.items():
+        if generic.lower() in adapted.lower():
+            adapted = adapted.replace(generic, korean_ref)
+    
+    # 2. Korean academic writing conventions
+    if academic_level == "grad" or academic_level == "researcher":
+        # Use 존댓말 (formal polite speech) for academic tone
+        adapted = convert_to_formal_korean(adapted)
+    else:
+        # Use 해체 (casual) for blog/undergrad audience
+        adapted = convert_to_casual_korean(adapted)
+    
+    # 3. Bilingual key term presentation
+    # Convert single-language terms to (한국어 용어 (English term))
+    term_pairs = extract_glossary_pairs(adapted)
+    for korean_term, english_term in term_pairs.items():
+        pattern = f"({korean_term})"
+        replacement = f"({korean_term} ({english_term}))"
+        adapted = adapted.replace(pattern, replacement)
+    
+    return adapted
+```
+
+### 4. Citation Hallucination Prevention
+
+Add `validate_citations()` with Zotero library verification:
+
+```python
+def validate_citations(post: str, citations: List[Citation]) -> Dict:
+    """
+    Validate citations against Zotero library and RAG corpus.
+    
+    Args:
+        post: Post content
+        citations: List of Citation objects
+    
+    Returns:
+        Dict with 'verified_citations', 'unverified_claims', 'validation_report'
+    """
+    verified = []
+    unverified = []
+    
+    # Check against Zotero library via MCP
+    for citation in citations:
+        zotero_result = zotero_search(citation.identifier)
+        
+        if zotero_result:
+            # Verify DOI existence
+            doi_valid = validate_doi(citation.identifier)
+            verified.append({
+                'citation': citation,
+                'zotero_found': True,
+                'doi_valid': doi_valid
+            })
+        else:
+            unverified.append(citation)
+    
+    # Extract all claims from post
+    all_claims = extract_claims(post)
+    
+    # Populate ALLOWED_CLAIMS with verified facts from RAG corpus
+    verified_claims = []
+    unverified_claims = []
+    
+    for claim in all_claims:
+        if claim in ALLOWED_CLAIMS:
+            verified_claims.append(claim)
+        else:
+            # Check if claim appears in RAG corpus
+            rag_hits = rag_pipeline.search(claim)
+            if rag_hits:
+                verified_claims.append(claim)
+                ALLOWED_CLAIMS[claim] = extract_citation_from_rag(rag_hits[0])
+            else:
+                unverified_claims.append(claim)
+    
+    # Flag unverified claims
+    for claim in unverified_claims:
+        post = post.replace(claim, f"{claim} [NEEDS_VERIFICATION]")
+    
+    return {
+        'verified_citations': verified,
+        'unverified_citations': unverified,
+        'verified_claims': verified_claims,
+        'unverified_claims': unverified_claims,
+        'validation_report': {
+            'total_citations': len(citations),
+            'verified_count': len(verified),
+            'hallucination_risk': len(unverified_claims) > 0,
+            'flagged_content': post
+        }
+    }
+```
+
+### 5. Quarto Environment Validation
+
+Add `validate_quarto_env()` for environment readiness:
+
+```python
+def validate_quarto_env() -> Dict[str, bool]:
+    """
+    Validate Quarto environment and dependencies before rendering.
+    
+    Returns:
+        Dict with validation status for all requirements
+    """
+    checks = {}
+    
+    # 1. Check for required packages
+    required_packages = ['matplotlib', 'plotly', 'kaleido', 'quarto']
+    for package in required_packages:
+        try:
+            __import__(package)
+            checks[f'package_{package}'] = True
+        except ImportError:
+            checks[f'package_{package}'] = False
+            print(f"Warning: {package} not installed. Install with: pip install {package}")
+    
+    # 2. Verify _quarto.yml configuration
+    try:
+        quarto_config = load_yaml('_quarto.yml')
+        checks['quarto_yml_exists'] = True
+        checks['quarto_yml_valid'] = validate_quarto_config(quarto_config)
+    except FileNotFoundError:
+        checks['quarto_yml_exists'] = False
+        checks['quarto_yml_valid'] = False
+    
+    # 3. Test render pipeline before full generation
+    test_qmd = """---
+title: "Test"
+format: html
+---
+
+This is a test. $V = \\sum_i w_i \\phi_i$
+"""
+    try:
+        test_output = subprocess.run(['quarto', 'render', test_qmd, '--to', 'html'],
+                                    capture_output=True, timeout=30)
+        checks['render_pipeline_works'] = test_output.returncode == 0
+    except Exception as e:
+        checks['render_pipeline_works'] = False
+        print(f"Render test failed: {e}")
+    
+    # 4. Korean font check
+    korean_fonts = ['Noto Sans KR', 'NanumGothic', 'Spoqa Han Sans Neo']
+    font_available = False
+    for font in korean_fonts:
+        if check_font_installed(font):
+            checks[f'korean_font_{font}'] = True
+            font_available = True
+        else:
+            checks[f'korean_font_{font}'] = False
+    
+    checks['korean_font_available'] = font_available
+    if not font_available:
+        print("Warning: No Korean fonts found. Install with: brew install font-noto-sans-cjk")
+    
+    checks['all_checks_pass'] = all(
+        v for k, v in checks.items() 
+        if not k.startswith('korean_font_') and k != 'all_checks_pass'
+    )
+    
+    return checks
+```
+
+### 6. CuriosityModulator Integration
+
+Add `CuriosityModulator` class for engaging Korean hook types:
+
+```python
+class CuriosityModulator:
+    """
+    Generates engaging hooks in Korean with diverse cognitive triggers.
+    Prevents repetitive hook types across consecutive sections.
+    """
+    
+    HOOK_TYPES = {
+        "PARADOX": {
+            "template": "역설적이게도...",
+            "example": "역설적이게도, 뇌의 가장 강력한 학습 메커니즘은 차이를 억누르는 메커니즘과 함께 작동합니다.",
+            "domain": ["CRMB", "EfficientCoding"]
+        },
+        "CONNECTION": {
+            "template": "의외의 연결고리가...",
+            "example": "의외의 연결고리가, 1970년대 뇌과학과 압축 신호처리 이론을 이어줍니다.",
+            "domain": ["CrossDomain"]
+        },
+        "HISTORY": {
+            "template": "역사적으로 흥미로운 것은...",
+            "example": "역사적으로 흥미로운 것은, Grossberg가 적응 공명 이론을 제안했던 바로 그 시점에",
+            "domain": ["CRMB"]
+        },
+        "IMPLICATION": {
+            "template": "이것이 의미하는 바는...",
+            "example": "이것이 의미하는 바는, 뉴런들은 실제로 효율적인 부호화 원칙을 구현하고 있다는 것입니다.",
+            "domain": ["EfficientCoding"]
+        },
+        "MISCONCEPTION": {
+            "template": "흔히 오해하는 것과 달리...",
+            "example": "흔히 오해하는 것과 달리, 경계 신호는 단순한 억제가 아닙니다.",
+            "domain": ["CRMB"]
+        },
+        "FRONTIER": {
+            "template": "최신 연구에 따르면...",
+            "example": "최신 연구에 따르면, 뇌의 laminar 구조는 hierarchical 효율 코딩을 최적화합니다.",
+            "domain": ["CRMB", "EfficientCoding"]
+        }
+    }
+    
+    def __init__(self):
+        self.last_hook_type = None
+        self.hook_history = []
+    
+    def select_hook(self, domain: str, force_type: str = None) -> Dict[str, str]:
+        """
+        Select next hook type, avoiding repetition.
+        
+        Args:
+            domain: "CRMB"|"EfficientCoding"|"CrossDomain"
+            force_type: Override selection (for specific content)
+        
+        Returns:
+            Dict with 'hook_type', 'template', 'example', 'domain'
+        """
+        if force_type and force_type in self.HOOK_TYPES:
+            selected_type = force_type
+        else:
+            # Find applicable hooks for domain
+            applicable = [
+                hook_type for hook_type, config in self.HOOK_TYPES.items()
+                if domain in config['domain'] and hook_type != self.last_hook_type
+            ]
+            
+            if not applicable:
+                # Fallback: use any hook not used last time
+                applicable = [
+                    hook_type for hook_type in self.HOOK_TYPES.keys()
+                    if hook_type != self.last_hook_type
+                ]
+            
+            selected_type = random.choice(applicable)
+        
+        self.last_hook_type = selected_type
+        self.hook_history.append(selected_type)
+        
+        config = self.HOOK_TYPES[selected_type]
+        return {
+            'hook_type': selected_type,
+            'template': config['template'],
+            'example': config['example'],
+            'domain': config['domain'],
+            'position_in_sequence': len(self.hook_history)
+        }
+    
+    def reset_history(self):
+        """Reset hook history for new post."""
+        self.last_hook_type = None
+        self.hook_history = []
+    
+    def suggest_hook_improvement(self, current_hook: str, content: str) -> str:
+        """Suggest rewording to match selected hook type."""
+        return f"Consider rephrasing as: {current_hook['template']} [your content here]"
+```
+
+Example usage in post generation:
+
+```python
+modulator = CuriosityModulator()
+
+# Section 1
+hook1 = modulator.select_hook("CRMB")
+section1_content = f"{hook1['template']} {your_content_here}"
+
+# Section 2 - automatically avoids same hook type
+hook2 = modulator.select_hook("EfficientCoding")
+section2_content = f"{hook2['template']} {your_content_here}"
+```
+
 ### 7. Quarto Integration
 
 The project uses Quarto for rendering. Posts are generated as `.qmd` files:
