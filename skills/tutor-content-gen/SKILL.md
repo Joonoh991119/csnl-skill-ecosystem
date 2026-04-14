@@ -1,3 +1,15 @@
+---
+name: tutor-content-gen
+description: >
+  Socratic dialogue generator for neuroscience RAG tutoring. Creates contextually-grounded,
+  publication-aligned educational content from CRMB source material with hallucination
+  prevention, graduate-level scaffolding, and bilingual Korean/English support.
+  MANDATORY TRIGGERS: tutoring content generation, Socratic dialogue, educational
+  explanation, concept explanation, study guide, flashcard generation, bilingual
+  educational content, hallucination prevention, source grounding, difficulty
+  calibration, Korean term consistency in generated content.
+---
+
 # tutor-content-gen: Socratic Dialogue Generation for Neuroscience RAG Tutoring
 
 Skill for generating contextually-grounded, publication-aligned Socratic dialogues in neuroscience education. Integrates with the CRMB (Computational Research Methods in Behavioral Neuroscience) source material corpus to ensure mechanistic accuracy and prevent hallucination.

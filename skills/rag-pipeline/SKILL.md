@@ -720,4 +720,132 @@ RRF weights from CRMB: dense=0.50, sparse=0.30, colbert=0.20 (k=60).
 - **eval-runner skill**: Benchmark retrieval quality on test queries
 - **tutor-content-gen skill**: Consumes retrieved context to generate educational content
 - **CRMB_tutor**: Direct integration with existing parsing pipeline + LanceDB migration
+- **db-pipeline skill**: Full DB improvement orchestration (Marker → Nougat → migrate → re-embed → eval)
+
+---
+
+## DB Session: pgvector Schema Versioning
+
+Versioned migration system for evolving the pgvector schema as DB content expands:
+
+```python
+SCHEMA_VERSIONS = {
+    'v1': {  # Current: summaries only
+        'columns': ['id', 'chapter', 'summary', 'vector'],
+        'vector_dim': 3072,  # BUG: lance_store.py hardcode
+    },
+    'v2': {  # Target: raw + equations
+        'columns': ['id', 'chapter', 'section_path', 'raw_text', 'summary',
+                     'equations_latex', 'figure_refs', 'vector', 'sparse_vector'],
+        'vector_dim': 1024,  # Correct for BGE-M3
+        'index': 'hnsw', 'hnsw_m': 16, 'hnsw_ef': 200,
+    }
+}
+
+class SchemaMigrator:
+    def __init__(self, conn_string: str):
+        self.conn = psycopg2.connect(conn_string)
+        self._ensure_version_table()
+
+    def _ensure_version_table(self):
+        with self.conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS schema_version (
+                    version VARCHAR(10) PRIMARY KEY,
+                    applied_at TIMESTAMP DEFAULT NOW(),
+                    rollback_sql TEXT
+                )""")
+        self.conn.commit()
+
+    def migrate_v1_to_v2(self):
+        rollback_sql = "ALTER TABLE chunks DROP COLUMN IF EXISTS raw_text, equations_latex, figure_refs, section_path, sparse_vector;"
+        with self.conn.cursor() as cur:
+            cur.execute("ALTER TABLE chunks ADD COLUMN IF NOT EXISTS raw_text TEXT;")
+            cur.execute("ALTER TABLE chunks ADD COLUMN IF NOT EXISTS equations_latex TEXT[];")
+            cur.execute("ALTER TABLE chunks ADD COLUMN IF NOT EXISTS figure_refs TEXT[];")
+            cur.execute("ALTER TABLE chunks ADD COLUMN IF NOT EXISTS section_path TEXT;")
+            cur.execute("ALTER TABLE chunks ADD COLUMN IF NOT EXISTS sparse_vector JSONB;")
+            # Fix dimension: drop old index, alter column, recreate
+            cur.execute("DROP INDEX IF EXISTS chunks_vector_idx;")
+            cur.execute(f"ALTER TABLE chunks ALTER COLUMN vector TYPE vector(1024);")
+            cur.execute("CREATE INDEX chunks_vector_idx ON chunks USING hnsw (vector vector_cosine_ops) WITH (m=16, ef_construction=200);")
+            cur.execute("INSERT INTO schema_version (version, rollback_sql) VALUES ('v2', %s);", (rollback_sql,))
+        self.conn.commit()
+
+    def rollback(self, target_version: str):
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT rollback_sql FROM schema_version WHERE version > %s ORDER BY applied_at DESC;", (target_version,))
+            for row in cur.fetchall():
+                cur.execute(row[0])
+        self.conn.commit()
+```
+
+## DB Session: Batch Re-Embedding for MPS (Apple Silicon)
+
+Optimized batch embedding for M4 Pro (64GB) with checkpoint/resume:
+
+```python
+from FlagEmbedding import BGEM3FlagModel
+from tqdm import tqdm
+import json, os
+
+def batch_reembed_mps(texts: list, batch_size: int = 64, checkpoint_dir: str = "./checkpoints"):
+    """Re-embed all chunks with BGE-M3 on Apple Silicon MPS."""
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    checkpoint_file = f"{checkpoint_dir}/embed_progress.json"
+
+    # Resume from checkpoint
+    start_idx = 0
+    if os.path.exists(checkpoint_file):
+        with open(checkpoint_file) as f:
+            start_idx = json.load(f)["last_completed"]
+        print(f"Resuming from batch {start_idx // batch_size}")
+
+    model = BGEM3FlagModel("BAAI/bge-m3", device="mps", use_fp16=True)
+    all_dense, all_sparse = [], []
+
+    for i in tqdm(range(start_idx, len(texts), batch_size), desc="Embedding"):
+        batch = texts[i:i + batch_size]
+        output = model.encode(batch, return_dense=True, return_sparse=True, return_colbert_vecs=False)
+        all_dense.extend(output['dense_vecs'].tolist())
+        all_sparse.extend(output['lexical_weights'])
+
+        # Checkpoint every 10 batches
+        if (i // batch_size) % 10 == 0:
+            with open(checkpoint_file, 'w') as f:
+                json.dump({"last_completed": i + batch_size}, f)
+
+    assert all(len(v) == 1024 for v in all_dense), "Dimension mismatch! Expected 1024."
+    return all_dense, all_sparse
+```
+
+## DB Session: Before/After Eval Hook
+
+Automatic quality comparison around migrations:
+
+```python
+def migration_eval_hook(conn_string: str, queries: list, migrate_fn: callable, rollback_threshold: float = 0.05):
+    """Run eval before and after migration, auto-rollback if quality drops."""
+    # Snapshot before
+    before_metrics = run_eval_queries(conn_string, queries)  # returns {query_id: {ndcg, mrr, recall}}
+    print(f"Before: avg NDCG={mean([m['ndcg'] for m in before_metrics.values()]):.3f}")
+
+    # Run migration
+    migrate_fn()
+
+    # Eval after
+    after_metrics = run_eval_queries(conn_string, queries)
+    print(f"After: avg NDCG={mean([m['ndcg'] for m in after_metrics.values()]):.3f}")
+
+    # Compare
+    diff = {qid: {k: after_metrics[qid][k] - before_metrics[qid][k] for k in ['ndcg', 'mrr', 'recall']}
+            for qid in before_metrics}
+    avg_ndcg_delta = mean([d['ndcg'] for d in diff.values()])
+
+    if avg_ndcg_delta < -rollback_threshold:
+        print(f"ROLLBACK: NDCG dropped {avg_ndcg_delta:.3f} (threshold: -{rollback_threshold})")
+        return {"action": "rollback", "diff": diff}
+
+    return {"action": "keep", "diff": diff, "improvement": avg_ndcg_delta}
+```
 

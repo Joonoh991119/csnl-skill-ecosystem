@@ -475,3 +475,114 @@ Add "equations" field to paper processing output:
   ]
 }
 ```
+
+
+## Marker Integration for CRMB
+
+**Marker (marker-pdf) CLI Usage**
+
+Single chapter conversion:
+```bash
+marker_single path/to/chapter.pdf --output_dir output/
+```
+
+Batch processing (all 20 CRMB chapters):
+```bash
+marker /path/to/chapters/ /path/to/output/ --workers 4
+```
+
+**Output Format**
+- Markdown with preserved LaTeX equations (`$$...$$` blocks)
+- Heading hierarchy maintained (h1→h6)
+- Figures extracted to `images/` subdirectory
+- Tables converted to markdown table syntax
+
+**Integration with chunker_v2.py**
+- Consumes Marker markdown output directly
+- Extracts equations using regex: `\$\$[^$]+\$\$`
+- Detects section boundaries from heading levels
+- Splits chapters into semantic chunks preserving equation context
+
+**Marker vs PyMuPDF Trade-off**
+- **Marker**: Better layout preservation, handles complex PDFs, slower
+- **PyMuPDF**: Faster extraction, better image handling, weaker on document structure
+
+---
+
+## Batch Chapter Processing Pipeline
+
+**CRMB Chapter Mapping**
+```python
+CRMB_CHAPTERS = {
+    1: "Neural Networks",
+    2: "How a Brain Makes a Mind",
+    3: "Contrast and Constancy",
+    4: "Early Vision: Lightness Illusions and Scintillations",
+    5: "Seeing: Boundary/Surface Completion (BCS/FCS)",
+    6: "3-D Perception and Figure-Ground Segregation",
+    7: "Brightness and Lightness",
+    8: "Motion Perception",
+    9: "Texture Perception and Segmentation",
+    10: "Attention and Preattention",
+    11: "Face Recognition and Emotion Detection",
+    12: "Language and Cognition",
+    13: "Learning and Plasticity",
+    14: "Memory Systems",
+    15: "Decision Making",
+    16: "Reward and Motivation",
+    17: "Sleep and Circadian Rhythms",
+    18: "Consciousness",
+    19: "Neurological and Psychiatric Disorders",
+    20: "Future Directions"
+}
+```
+
+**Processing Loop**
+```python
+for chapter_id, chapter_title in CRMB_CHAPTERS.items():
+    try:
+        # Extract via Marker
+        # Parse with chunker_v2
+        # Store with retry on failure (max 3 attempts)
+        # Log progress: Chapter {chapter_id}/20 complete
+    except Exception as e:
+        log_error(chapter_id, e)
+        # Implement backoff retry
+```
+
+**Output Structure**
+```
+output/
+├── 1/
+│   ├── text.md
+│   ├── figures/
+│   │   ├── figure_1_1.png
+│   │   └── figure_1_2.png
+│   └── equations.json
+├── 2/
+│   └── ...
+└── metadata.json
+```
+
+---
+
+## Quality Verification (Per-Chapter)
+
+**Validation Checks**
+- **Section count**: Match table of contents (e.g., Chapter 5 expects 4 main sections)
+- **Equations**: Count > 0 for math-heavy chapters (1-10, 13-16)
+- **Figures**: Verify extraction completeness; flag missing images
+- **Character sanity**: `10 * page_count < chars < 15 * page_count`
+- **Markdown structure**: All h2+ preceded by h1; no orphaned h3+ headings
+
+**Output Report**
+```json
+{
+  "chapter": 5,
+  "sections": 4,
+  "equations": 23,
+  "figures": 8,
+  "chars": 45230,
+  "status": "pass|warn|fail"
+}
+```
