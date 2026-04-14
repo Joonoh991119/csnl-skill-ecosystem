@@ -400,6 +400,189 @@ def hybrid_retrieve(query: str, collection, k: int = 10, alpha: float = 0.7):
     return combined[:k]
 ```
 
+### Advanced Hybrid Search with Tunable Weights and LanceDB
+
+For production retrieval with precision/recall control, use Reciprocal Rank Fusion (RRF) with explicit component weighting:
+
+```python
+from flagembedding import BGEM3FlagModel
+import numpy as np
+
+# Initialize BGEM3FlagModel (used by CRMB_tutor)
+model = BGEM3FlagModel(
+    model_name='BAAI/bge-m3',
+    use_fp16=True,
+    device='cuda'  # or 'cpu' for M4 Pro
+)
+
+def rrf_fusion(dense_scores, sparse_scores, colbert_scores=None,
+               dense_weight=0.50, sparse_weight=0.30, colbert_weight=0.20, k=60):
+    """
+    Reciprocal Rank Fusion with tunable weights.
+    - dense_weight: Dense vector similarity (semantic)
+    - sparse_weight: BM25 (lexical/keyword match)
+    - colbert_weight: ColBERT (token-level interactions)
+    Adjust weights: high dense for semantic queries, high sparse for domain terms.
+    """
+    rrf_scores = {}
+    
+    # RRF formula: 1/(k + rank) for each component
+    for rank, doc_id in enumerate(dense_scores.keys(), 1):
+        rrf_scores[doc_id] = dense_weight / (60 + rank)
+    
+    for rank, doc_id in enumerate(sparse_scores.keys(), 1):
+        rrf_scores[doc_id] = rrf_scores.get(doc_id, 0) + sparse_weight / (60 + rank)
+    
+    if colbert_scores:
+        for rank, doc_id in enumerate(colbert_scores.keys(), 1):
+            rrf_scores[doc_id] = rrf_scores.get(doc_id, 0) + colbert_weight / (60 + rank)
+    
+    return sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
+
+# Precision-focused: increase dense and colbert weights
+high_precision_weights = {'dense': 0.60, 'sparse': 0.20, 'colbert': 0.20}
+
+# Recall-focused: increase sparse weight for domain terms
+high_recall_weights = {'dense': 0.40, 'sparse': 0.50, 'colbert': 0.10}
+```
+
+### LanceDB Integration for Hybrid Search
+
+LanceDB provides in-process vector indexing with native hybrid search:
+
+```python
+import lancedb
+
+# Create LanceDB connection
+db = lancedb.connect("/path/to/lancedb")
+
+# Create table with hybrid index (EMBEDDING_DIM=1024 for BGEM3)
+documents = [
+    {"id": "doc1", "text": "boundary completion in...", 
+     "embedding": model.encode("boundary completion")['dense_vecs']},
+    # ... more docs
+]
+
+table = db.create_table("papers", data=documents, mode="overwrite")
+
+# Add BM25 index for sparse search
+table.create_search_index(
+    column="text",
+    config=lancedb.SearchIndexConfig(index_type="bm25")
+)
+
+def hybrid_search_lancedb(query, table, top_k=10):
+    """Hybrid search: dense + BM25 sparse + ColBERT token matching."""
+    query_embedding = model.encode(query)['dense_vecs'][0]
+    
+    # Dense vector search
+    dense_results = table.search(query_embedding).limit(top_k*2).to_list()
+    
+    # BM25 sparse search
+    bm25_results = table.search(query, query_type="bm25").limit(top_k*2).to_list()
+    
+    # ColBERT: token-level interactions (embeddings for each token)
+    query_tokens = query.split()
+    token_embeddings = model.encode(query_tokens)['dense_vecs']
+    
+    # Fuse results with RRF
+    return rrf_fusion(
+        {r['id']: r['_distance'] for r in dense_results},
+        {r['id']: r['_relevance'] for r in bm25_results},
+        colbert_scores={r['id']: r.get('_colbert', 0) for r in bm25_results}
+    )
+```
+
+### BM25 Precision Tuning for Domain-Specific Terms
+
+BM25 can match false positives when terms appear in wrong sections. Use phrase matching and term boosting:
+
+```python
+from rank_bm25 import BM25Okapi
+
+def tune_bm25_precision(documents, domain_terms, phrase_pairs):
+    """
+    Reduce false positives in domain-specific retrieval.
+    Example: "boundary completion" should match neuroscience chapters, not geometry.
+    """
+    tokenized_docs = [doc.lower().split() for doc in documents]
+    bm25 = BM25Okapi(tokenized_docs)
+    
+    def retrieve_with_precision(query, k=10, threshold=2.0):
+        scores = bm25.get_scores(query.lower().split())
+        
+        # Phase 1: Phrase matching (exact phrase boost)
+        phrase_boost = 1.0
+        for phrase in phrase_pairs:
+            if phrase.lower() in query.lower():
+                for i, doc in enumerate(documents):
+                    if phrase.lower() in doc.lower():
+                        scores[i] *= 1.5  # Boost exact phrase matches
+        
+        # Phase 2: Domain term boosting (prefer domain context)
+        for i, doc in enumerate(documents):
+            term_count = sum(1 for term in domain_terms if term.lower() in doc.lower())
+            if term_count > 0:
+                scores[i] *= (1.0 + 0.2 * term_count)
+        
+        # Phase 3: Filter by section relevance
+        top_indices = np.argsort(scores)[::-1][:k*2]
+        filtered = [
+            (idx, scores[idx]) for idx in top_indices 
+            if scores[idx] >= threshold
+        ]
+        return filtered[:k]
+    
+    return retrieve_with_precision
+
+# Example domain tuning
+domain_terms = ['neuroscience', 'visual working memory', 'boundary completion', 'fMRI']
+phrase_pairs = ['boundary completion', 'visual working memory', 'task-fMRI']
+```
+
+### Retrieval Debugging Workflow
+
+Diagnose false positives and understand per-component scores:
+
+```python
+def debug_retrieval(query, table, documents, k=5):
+    """Step-by-step debugging of hybrid retrieval failures."""
+    print(f"\nDEBUG: Query = '{query}'")
+    
+    # Step 1: Component scores
+    query_embedding = model.encode(query)['dense_vecs'][0]
+    dense_results = table.search(query_embedding).limit(k*2).to_list()
+    bm25_results = table.search(query, query_type="bm25").limit(k*2).to_list()
+    
+    print("\n1. DENSE (Vector Similarity):")
+    for r in dense_results[:k]:
+        print(f"   [{r['_distance']:.3f}] {r['text'][:60]}...")
+    
+    print("\n2. SPARSE (BM25):")
+    for r in bm25_results[:k]:
+        print(f"   [{r['_relevance']:.3f}] {r['text'][:60]}...")
+    
+    # Step 2: Identify false positives
+    print("\n3. FALSE POSITIVE CHECK:")
+    dense_docs = {r['id'] for r in dense_results[:k]}
+    bm25_docs = {r['id'] for r in bm25_results[:k]}
+    only_in_bm25 = bm25_docs - dense_docs
+    
+    for doc_id in only_in_bm25:
+        doc = next((d for d in documents if d['id'] == doc_id), None)
+        if doc:
+            print(f"   - BM25-only: '{doc['text'][:80]}...'")
+            print(f"     Action: Add negative example OR boost domain terms")
+    
+    # Step 3: Add negative example
+    print("\n4. NEGATIVE EXAMPLE (to suppress false positive):")
+    print(f"   negative_examples.append({{")
+    print(f"     'query': '{query}',")
+    print(f"     'false_positive': '{only_in_bm25.pop() if only_in_bm25 else 'N/A'}',")
+    print(f"     'weight': -0.1")
+    print(f"   }})")
+```
+
 ## Stage 6: Context Assembly
 
 ```python
@@ -537,3 +720,4 @@ RRF weights from CRMB: dense=0.50, sparse=0.30, colbert=0.20 (k=60).
 - **eval-runner skill**: Benchmark retrieval quality on test queries
 - **tutor-content-gen skill**: Consumes retrieved context to generate educational content
 - **CRMB_tutor**: Direct integration with existing parsing pipeline + LanceDB migration
+

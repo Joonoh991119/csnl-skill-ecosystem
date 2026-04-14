@@ -250,3 +250,311 @@ print("Interactive figure saved: output_figure.html")
 - Always include axis labels, title, and legend when applicable.
 - Use colorblind-friendly palettes by default.
 - For error bars: prefer SEM (standard error of mean) unless user specifies SD or CI.
+
+## Neuroimaging Visualization: fMRI & Cortical Surface Rendering
+
+### FreeSurfer Surface Data Loading & Display
+
+**Loading .mgh/.mgz Surface Maps with nibabel:**
+```python
+import nibabel as nib
+import nilearn.plotting as plotting
+from nilearn import datasets
+import numpy as np
+
+# Load FreeSurfer surface data
+surf_file = 'lh.pial'  # left hemisphere surface
+surf_mesh = nib.freesurfer.read_geometry(surf_file)  # vertices, faces
+
+# Load .mgh/.mgz overlay (e.g., cortical thickness, activation)
+overlay_file = 'lh.thickness.mgh'
+overlay_data = nib.load(overlay_file).get_fdata().ravel()
+
+# Plot on inflated surface
+plotting.plot_surf_stat_map(surf_mesh, overlay_data, 
+    hemi='left', view='lateral', cmap='hot',
+    title='Left Hemisphere Activation')
+```
+
+### Retinotopic Maps: Polar Angle & Eccentricity
+
+**HSV-Cyclic Colormap for Polar Angle, Hot for Eccentricity:**
+```python
+# Polar angle: HSV (cyclic 0-360°), Eccentricity: hot colormap
+def plot_retinotopy(polar_angle, eccentricity, vertices, faces):
+    """Render visual field maps on cortical surface"""
+    
+    # Normalize polar angle to [0, 1] for HSV (0=red, 0.5=cyan, 1=red)
+    pa_norm = (polar_angle % 360) / 360.0
+    
+    # Eccentricity in log scale (common in vision)
+    ecc_norm = np.log1p(eccentricity) / np.log1p(eccentricity.max())
+    
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    
+    # Polar angle plot
+    plotting.plot_surf_stat_map((vertices, faces), pa_norm, 
+        cmap='hsv', vmin=0, vmax=1, ax=ax1,
+        title='Polar Angle (Visual Field)')
+    
+    # Eccentricity plot
+    plotting.plot_surf_stat_map((vertices, faces), ecc_norm, 
+        cmap='hot', vmin=0, vmax=1, ax=ax2,
+        title='Eccentricity (degrees)')
+    
+    return fig
+```
+
+### FreeSurfer Label Overlays (V1/V2/V3 Boundaries)
+
+**Rendering ROI Boundaries from FreeSurfer Labels:**
+```python
+# Load ROI labels (e.g., V1, V2, V3 from aparc.a2009s)
+labels_file = 'lh.aparc.a2009s.annot'
+labels, ctab, names = nib.freesurfer.read_annot(labels_file)
+
+# Define ROI indices (example)
+v1_idx = names.index(b'V1')  # V1 label index
+v2_idx = names.index(b'V2')  # V2 label index
+
+# Create mask overlay
+roi_mask = np.zeros_like(labels, dtype=float)
+roi_mask[labels == v1_idx] = 1.0
+roi_mask[labels == v2_idx] = 0.5
+
+plotting.plot_surf_stat_map((vertices, faces), roi_mask,
+    cmap='Paired', vmin=0, vmax=1,
+    title='Visual Areas (V1, V2)')
+```
+
+### Multi-Subject Panel Layout (Group Average)
+
+**Grid Layout for N Subjects + Mean Across Subjects:**
+```python
+def plot_group_retinotopy(subject_data, n_subjects=8):
+    """N-subject grid + group average (e.g., 3x3 layout)"""
+    
+    n_cols = 3
+    n_rows = (n_subjects + 2) // n_cols  # +1 for average
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 12))
+    axes = axes.flatten()
+    
+    # Plot each subject
+    for i, (subj_id, data) in enumerate(subject_data.items()):
+        plotting.plot_surf_stat_map(data['mesh'], data['polar_angle'],
+            hemi='left', view='lateral', cmap='hsv',
+            title=f'Sub-{subj_id}', ax=axes[i])
+    
+    # Plot group average
+    group_avg = np.mean([d['polar_angle'] for d in subject_data.values()], axis=0)
+    plotting.plot_surf_stat_map(subject_data[list(subject_data.keys())[0]]['mesh'], 
+        group_avg, hemi='left', cmap='hsv',
+        title='Group Average (N=8)', ax=axes[n_subjects])
+    
+    plt.tight_layout()
+    return fig
+```
+
+### Volume-Space fMRI: Glass Brain & Stat Maps
+
+**Glass Brain with Overlay Stats:**
+```python
+from nilearn.plotting import plot_glass_brain, plot_stat_map
+from nilearn import image
+
+# Load 4D fMRI stat map
+stat_img = nib.load('stat_map_fstat.nii.gz')  # 3D or 4D
+bg_img = nib.load('mni152_t1_2mm.nii.gz')  # Standard template
+
+# Glass brain view (max intensity projection)
+plotting.plot_glass_brain(stat_img, colorbar=True, 
+    title='Glass Brain View', cmap='RdYlBu_r',
+    threshold=3.0)  # t-stat threshold
+
+# Stat map overlay on anatomical template
+plotting.plot_stat_map(stat_img, bg_img, 
+    title='fMRI Activation (t > 3)',
+    threshold=3.0, cmap='hot')
+
+plt.savefig('fmri_glass_brain.png', dpi=300, bbox_inches='tight')
+```
+
+### Flattened Surface Visualization
+
+**Rendering on Flattened Cortex (Pial + Flat):**
+```python
+# Load both pial and flattened surfaces
+pial_vertices, pial_faces = nib.freesurfer.read_geometry('lh.pial')
+flat_vertices, flat_faces = nib.freesurfer.read_geometry('lh.flat')
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+
+# Inflated view
+plotting.plot_surf_stat_map((pial_vertices, pial_faces), 
+    overlay_data, hemi='left', view='lateral', cmap='hot', ax=ax1,
+    title='Pial Surface (3D)')
+
+# Flattened view (no sphere curvature)
+plotting.plot_surf_stat_map((flat_vertices, flat_faces), 
+    overlay_data, cmap='hot', ax=ax2,
+    title='Flattened Surface (2D)')
+
+plt.tight_layout()
+```
+
+---
+Last Updated: 2026-04-14
+Version: 1.1 (Added Neuroimaging Visualization)## Neuroimaging Visualization: fMRI & Cortical Surface Rendering
+
+### FreeSurfer Surface Data Loading & Display
+
+**Loading .mgh/.mgz Surface Maps with nibabel:**
+```python
+import nibabel as nib
+import nilearn.plotting as plotting
+from nilearn import datasets
+import numpy as np
+
+# Load FreeSurfer surface data
+surf_file = 'lh.pial'  # left hemisphere surface
+surf_mesh = nib.freesurfer.read_geometry(surf_file)  # vertices, faces
+
+# Load .mgh/.mgz overlay (e.g., cortical thickness, activation)
+overlay_file = 'lh.thickness.mgh'
+overlay_data = nib.load(overlay_file).get_fdata().ravel()
+
+# Plot on inflated surface
+plotting.plot_surf_stat_map(surf_mesh, overlay_data, 
+    hemi='left', view='lateral', cmap='hot',
+    title='Left Hemisphere Activation')
+```
+
+### Retinotopic Maps: Polar Angle & Eccentricity
+
+**HSV-Cyclic Colormap for Polar Angle, Hot for Eccentricity:**
+```python
+# Polar angle: HSV (cyclic 0-360°), Eccentricity: hot colormap
+def plot_retinotopy(polar_angle, eccentricity, vertices, faces):
+    """Render visual field maps on cortical surface"""
+    
+    # Normalize polar angle to [0, 1] for HSV (0=red, 0.5=cyan, 1=red)
+    pa_norm = (polar_angle % 360) / 360.0
+    
+    # Eccentricity in log scale (common in vision)
+    ecc_norm = np.log1p(eccentricity) / np.log1p(eccentricity.max())
+    
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    
+    # Polar angle plot
+    plotting.plot_surf_stat_map((vertices, faces), pa_norm, 
+        cmap='hsv', vmin=0, vmax=1, ax=ax1,
+        title='Polar Angle (Visual Field)')
+    
+    # Eccentricity plot
+    plotting.plot_surf_stat_map((vertices, faces), ecc_norm, 
+        cmap='hot', vmin=0, vmax=1, ax=ax2,
+        title='Eccentricity (degrees)')
+    
+    return fig
+```
+
+### FreeSurfer Label Overlays (V1/V2/V3 Boundaries)
+
+**Rendering ROI Boundaries from FreeSurfer Labels:**
+```python
+# Load ROI labels (e.g., V1, V2, V3 from aparc.a2009s)
+labels_file = 'lh.aparc.a2009s.annot'
+labels, ctab, names = nib.freesurfer.read_annot(labels_file)
+
+# Define ROI indices (example)
+v1_idx = names.index(b'V1')  # V1 label index
+v2_idx = names.index(b'V2')  # V2 label index
+
+# Create mask overlay
+roi_mask = np.zeros_like(labels, dtype=float)
+roi_mask[labels == v1_idx] = 1.0
+roi_mask[labels == v2_idx] = 0.5
+
+plotting.plot_surf_stat_map((vertices, faces), roi_mask,
+    cmap='Paired', vmin=0, vmax=1,
+    title='Visual Areas (V1, V2)')
+```
+
+### Multi-Subject Panel Layout (Group Average)
+
+**Grid Layout for N Subjects + Mean Across Subjects:**
+```python
+def plot_group_retinotopy(subject_data, n_subjects=8):
+    """N-subject grid + group average (e.g., 3x3 layout)"""
+    
+    n_cols = 3
+    n_rows = (n_subjects + 2) // n_cols  # +1 for average
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 12))
+    axes = axes.flatten()
+    
+    # Plot each subject
+    for i, (subj_id, data) in enumerate(subject_data.items()):
+        plotting.plot_surf_stat_map(data['mesh'], data['polar_angle'],
+            hemi='left', view='lateral', cmap='hsv',
+            title=f'Sub-{subj_id}', ax=axes[i])
+    
+    # Plot group average
+    group_avg = np.mean([d['polar_angle'] for d in subject_data.values()], axis=0)
+    plotting.plot_surf_stat_map(subject_data[list(subject_data.keys())[0]]['mesh'], 
+        group_avg, hemi='left', cmap='hsv',
+        title='Group Average (N=8)', ax=axes[n_subjects])
+    
+    plt.tight_layout()
+    return fig
+```
+
+### Volume-Space fMRI: Glass Brain & Stat Maps
+
+**Glass Brain with Overlay Stats:**
+```python
+from nilearn.plotting import plot_glass_brain, plot_stat_map
+from nilearn import image
+
+# Load 4D fMRI stat map
+stat_img = nib.load('stat_map_fstat.nii.gz')  # 3D or 4D
+bg_img = nib.load('mni152_t1_2mm.nii.gz')  # Standard template
+
+# Glass brain view (max intensity projection)
+plotting.plot_glass_brain(stat_img, colorbar=True, 
+    title='Glass Brain View', cmap='RdYlBu_r',
+    threshold=3.0)  # t-stat threshold
+
+# Stat map overlay on anatomical template
+plotting.plot_stat_map(stat_img, bg_img, 
+    title='fMRI Activation (t > 3)',
+    threshold=3.0, cmap='hot')
+
+plt.savefig('fmri_glass_brain.png', dpi=300, bbox_inches='tight')
+```
+
+### Flattened Surface Visualization
+
+**Rendering on Flattened Cortex (Pial + Flat):**
+```python
+# Load both pial and flattened surfaces
+pial_vertices, pial_faces = nib.freesurfer.read_geometry('lh.pial')
+flat_vertices, flat_faces = nib.freesurfer.read_geometry('lh.flat')
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+
+# Inflated view
+plotting.plot_surf_stat_map((pial_vertices, pial_faces), 
+    overlay_data, hemi='left', view='lateral', cmap='hot', ax=ax1,
+    title='Pial Surface (3D)')
+
+# Flattened view (no sphere curvature)
+plotting.plot_surf_stat_map((flat_vertices, flat_faces), 
+    overlay_data, cmap='hot', ax=ax2,
+    title='Flattened Surface (2D)')
+
+plt.tight_layout()
+```
+
+---
+Last Updated: 2026-04-14
+Version: 1.1 (Added Neuroimaging Visualization)

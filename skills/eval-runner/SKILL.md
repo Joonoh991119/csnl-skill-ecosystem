@@ -373,3 +373,239 @@ Phase 2+:  Schedule daily at 02:00 AM via schedule skill
 2. **Ground truth is static**: As new papers are added, ground truth queries become stale. Re-review quarterly.
 3. **Circular dependency**: If paper-processor extracts claims wrong, ground truth is contaminated. Always verify ground truth against raw PDFs, not processed output.
 4. **Small test suites overfit**: With 30 queries, one flaky query swings precision@5 by 3%. Report confidence intervals.
+
+
+## Diagnostic Frameworks for Metric Divergence
+
+When individual metrics conflict, use this decision tree to isolate the root cause.
+
+### Metric Divergence Patterns
+
+**Pattern 1: High nDCG but Low MRR**
+- Symptom: nDCG@10 > 0.7, MRR < 0.5
+- Diagnosis: Relevant documents are ranked 6-10, not in top 5
+- Root cause: Query ambiguity or multi-faceted relevance
+- Fix: (1) Re-rank top-5 with diversity model, (2) Check if ground truth is overconstrained (mark multiple docs relevant), (3) Add query clarification step to retriever
+
+**Pattern 2: Low nDCG but High MRR**
+- Symptom: nDCG@10 < 0.6, MRR > 0.7
+- Diagnosis: Top-1 result is correct but rest irrelevant (ignoring rank positions 2-10)
+- Root cause: Query has single dominant answer; retriever lacks diversity
+- Fix: (1) Ensemble with BM25 to surface alternative angles, (2) Apply diversity penalty, (3) Verify ground truth includes related documents, not just one answer
+
+**Pattern 3: Both nDCG and MRR Low**
+- Symptom: nDCG < 0.6 AND MRR < 0.5
+- Diagnosis: Fundamental embedding/retrieval failure
+- Root cause: Embedding model mismatch, chunking destroys context, or query reformulation needed
+- Fix: (1) Swap embedding model, (2) Increase chunk overlap, (3) Try query expansion with LLM
+
+```python
+def diagnose_metric_divergence(results: dict) -> dict:
+    """Decision tree for metric conflicts."""
+    ndcg = results.get('ndcg_at_10', 0)
+    mrr = results.get('mrr', 0)
+    
+    diagnosis = {
+        'pattern': None,
+        'root_cause': None,
+        'fixes': []
+    }
+    
+    if ndcg > 0.7 and mrr < 0.5:
+        diagnosis['pattern'] = 'high_ndcg_low_mrr'
+        diagnosis['root_cause'] = 'relevant_docs_ranked_6to10'
+        diagnosis['fixes'] = [
+            'apply_diversity_reranking',
+            'check_ground_truth_overconstrained',
+            'add_query_clarification'
+        ]
+    elif ndcg < 0.6 and mrr > 0.7:
+        diagnosis['pattern'] = 'low_ndcg_high_mrr'
+        diagnosis['root_cause'] = 'single_answer_lack_diversity'
+        diagnosis['fixes'] = [
+            'ensemble_bm25',
+            'apply_diversity_penalty',
+            'verify_gt_includes_alternates'
+        ]
+    elif ndcg < 0.6 and mrr < 0.5:
+        diagnosis['pattern'] = 'both_low'
+        diagnosis['root_cause'] = 'fundamental_retrieval_failure'
+        diagnosis['fixes'] = [
+            'swap_embedding_model',
+            'increase_chunk_overlap',
+            'try_query_expansion'
+        ]
+    
+    return diagnosis
+```
+
+## Ablation Workflow: Isolating Failure Points
+
+Use ablation to pinpoint whether failures stem from retrieval, generation, or language issues.
+
+### Step 1: Test Retrieval Alone (Ground Truth Injection)
+
+Replace the actual retriever with ground truth gold passages to isolate generation quality:
+
+```python
+def ablation_retrieval_only(test_cases: list, ground_truth_passages: dict, 
+                            generator, output_file: str = 'ablation_retrieval.json'):
+    """Inject ground truth documents and measure generation quality in isolation."""
+    results = {'test_cases': []}
+    
+    for tc in test_cases:
+        query = tc['query']
+        gold_passages = ground_truth_passages[query]
+        
+        # Skip retrieval; use gold passages directly
+        answer = generator(query, context=gold_passages)
+        
+        # Score against reference (oracle factuality)
+        judge_score = call_llm_judge(query, answer, gold_passages)
+        
+        results['test_cases'].append({
+            'query_id': tc['id'],
+            'answer': answer,
+            'factuality_score': judge_score,
+            'retrieved_via': 'ground_truth'
+        })
+    
+    # If factuality is still low here, problem is generation, not retrieval
+    avg_score = sum(t['factuality_score'] for t in results['test_cases']) / len(results['test_cases'])
+    results['summary'] = {
+        'mean_factuality_with_gold': avg_score,
+        'conclusion': 'generation_problem' if avg_score < 3.5 else 'retrieval_problem'
+    }
+    
+    with open(output_file, 'w') as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
+    
+    return results
+```
+
+### Step 2: Test Generation with Perfect Retrieval
+
+Measure how much retrieval quality constrains generation:
+
+```python
+def ablation_generation_only(test_cases: list, actual_retriever, 
+                             gold_generator, output_file: str = 'ablation_generation.json'):
+    """Use actual retriever but compare against oracle generator on retrieved docs."""
+    results = {'test_cases': []}
+    
+    for tc in test_cases:
+        query = tc['query']
+        retrieved = actual_retriever.search(query, k=10)
+        context = '\n'.join([r['text'] for r in retrieved])
+        
+        # Use gold standard generator (e.g., Claude-3.5) instead of tutor
+        gold_answer = gold_generator(query, context=context)
+        actual_answer = actual_generator(query, context=context)
+        
+        # Compare quality
+        gold_score = call_llm_judge(query, gold_answer, context)
+        actual_score = call_llm_judge(query, actual_answer, context)
+        
+        results['test_cases'].append({
+            'query_id': tc['id'],
+            'gold_answer_score': gold_score,
+            'actual_answer_score': actual_score,
+            'gap': gold_score - actual_score
+        })
+    
+    avg_gap = sum(t['gap'] for t in results['test_cases']) / len(results['test_cases'])
+    results['summary'] = {
+        'mean_generation_gap': avg_gap,
+        'conclusion': 'generation_issue' if avg_gap > 0.5 else 'retrieval_sufficient'
+    }
+    
+    with open(output_file, 'w') as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
+    
+    return results
+```
+
+### Step 3: Language-Specific Ablation (Korean vs English)
+
+Run parallel evals on English and Korean to isolate language issues:
+
+```python
+def ablation_language_comparison(test_cases_bilingual: list, pipeline, 
+                                 output_file: str = 'ablation_language.json'):
+    """Compare Korean and English performance on same queries."""
+    results = {'en': [], 'ko': []}
+    
+    for tc in test_cases_bilingual:
+        query_en = tc.get('query_en')
+        query_ko = tc.get('query_ko')
+        
+        # Test English
+        if query_en:
+            answer_en = pipeline.generate(query_en)
+            retrieval_en = pipeline.retriever.search(query_en, k=5)
+            score_en = call_llm_judge(query_en, answer_en, retrieval_en)
+            results['en'].append({'query_id': tc['id'], 'score': score_en})
+        
+        # Test Korean
+        if query_ko:
+            answer_ko = pipeline.generate(query_ko)
+            retrieval_ko = pipeline.retriever.search(query_ko, k=5)
+            score_ko = call_llm_judge(query_ko, answer_ko, retrieval_ko)
+            results['ko'].append({'query_id': tc['id'], 'score': score_ko})
+    
+    avg_en = sum(r['score'] for r in results['en']) / len(results['en']) if results['en'] else 0
+    avg_ko = sum(r['score'] for r in results['ko']) / len(results['ko']) if results['ko'] else 0
+    
+    results['summary'] = {
+        'mean_en': avg_en,
+        'mean_ko': avg_ko,
+        'language_gap': avg_en - avg_ko,
+        'worse_lang': 'korean' if avg_ko < avg_en else 'english'
+    }
+    
+    with open(output_file, 'w') as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
+    
+    return results
+```
+
+## Korean-Specific Diagnostics
+
+When term consistency is low but naturalness is high, follow this checklist:
+
+1. **TERM_GLOSSARY Coverage**: Check if Korean terminology matches tutor-content-gen's glossary
+   - Run: `grep -F "$(answer_ko_terms)" TERM_GLOSSARY.json`
+   - If missing: Add to glossary and re-index
+
+2. **Generation Prompt Language Mixing**: Verify generation prompt is monolingual Korean
+   - Check tutor-content-gen SKILL.md: prompt should be >95% Korean, examples should use Korean papers
+   - If mixed: Regenerate with monolingual Korean examples
+
+3. **Retrieval Language Mismatch**: Ensure queries and indexed documents are same language
+   - Run: `detect_language(query_ko)` and `detect_language(doc_text)` on top-5 retrieved
+   - If English docs returned for Korean query: Add language filter to retriever
+
+```python
+def diagnose_korean_issues(results_ko: dict) -> dict:
+    """Korean-specific diagnostic checklist."""
+    diagnosis = {}
+    
+    naturalness = results_ko.get('naturalness_score', 0)
+    consistency = results_ko.get('consistency_score', 0)
+    retrieval_lang_mismatch = results_ko.get('retrieval_lang_mismatch', False)
+    
+    # Pattern: high naturalness, low consistency
+    if naturalness > 3.5 and consistency < 3.0:
+        diagnosis['issue'] = 'terminology_inconsistency'
+        diagnosis['checks'] = [
+            'check_TERM_GLOSSARY_coverage',
+            'verify_generation_prompt_korean_only',
+            'inspect_top_5_retrieved_docs_language'
+        ]
+    elif retrieval_lang_mismatch:
+        diagnosis['issue'] = 'retrieval_language_mismatch'
+        diagnosis['action'] = 'add_language_filter_to_retriever'
+    
+    return diagnosis
+```
+
