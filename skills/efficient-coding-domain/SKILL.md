@@ -3,7 +3,7 @@ name: efficient-coding-domain
 description: "Domain knowledge and RAG guidance for Efficient Coding theory in neuroscience. Covers Barlow's hypothesis, sparse coding, population coding, predictive coding, and metabolic constraints. Bridges to CRMB domain. TRIGGERS: efficient coding, sparse coding, population coding, predictive coding, metabolic efficiency, Barlow hypothesis"
 version: 1.0.0
 tags: [neuroscience, efficient-coding, theory, rag, crmb-bridge]
-requires: [crmb-tutor-base]
+requires: [rag-pipeline]
 ---
 
 # Efficient Coding Domain Skill
