@@ -377,3 +377,103 @@ results = pipeline.hybrid_search("boundary completion mechanisms", expander)
 - **LanceDB search**: ~10-30ms for k=10 (vector) + ~5ms re-ranking (ontology)
 
 Total end-to-end latency: ~100-200ms for retrieval.
+
+
+## Worked Example: "Boundary Completion" Query Expansion
+
+This example demonstrates the complete traversal from a user query through concept extraction, graph traversal, and result fusion.
+
+### Scenario
+**User query:** "How does boundary completion work in Grossberg's model?"
+
+### Step-by-Step Trace
+
+**1. Concept Extraction**
+```python
+query = "How does boundary completion work in Grossberg's model?"
+extracted = concept_extractor.extract(query)
+# Result: concept_id = "BCS_boundary_completion"
+```
+
+**2. Multi-Hop Graph Traversal (2-hop)**
+```python
+builder = OntologyBuilder()
+traversal = builder.traverse_graph(
+    start_concept="BCS_boundary_completion",
+    max_hops=2
+)
+# Traversal path:
+# BCS_boundary_completion --[part_of]--> BCS --[relates_to]--> FCS --[part_of]--> LAMINART
+# Secondary path:
+# FCS --[comprises]--> FCS_filling_in
+# LAMINART --[contains]--> LAMINART_layer23
+```
+
+**3. Expanded Concept Set**
+```python
+expanded_concepts = {
+    "BCS_boundary_completion",      # original
+    "BCS",                          # parent
+    "FCS",                          # related layer
+    "FCS_filling_in",              # FCS sublayer
+    "LAMINART",                     # higher architecture
+    "LAMINART_layer23"             # LAMINART detail
+}
+```
+
+**4. Chunk Retrieval via LanceDB**
+```python
+expander = QueryExpander()
+results_per_concept = {}
+for concept_id in expanded_concepts:
+    chunks = lancedb_client.search(
+        table=f"chunks_{concept_id}",
+        query_embedding=embed(query),
+        top_k=5
+    )
+    results_per_concept[concept_id] = chunks
+```
+
+**5. Reciprocal Rank Fusion (RRF)**
+```python
+fused_scores = {}
+for concept_id, ranked_chunks in results_per_concept.items():
+    for rank, chunk in enumerate(ranked_chunks, 1):
+        chunk_id = chunk['id']
+        rrf_score = 1.0 / (60 + rank)  # k=60
+        if chunk_id not in fused_scores:
+            fused_scores[chunk_id] = 0
+        fused_scores[chunk_id] += rrf_score
+
+ranked_results = sorted(
+    fused_scores.items(),
+    key=lambda x: x[1],
+    reverse=True
+)
+```
+
+**6. Diversity-Enforced Final Ranking**
+```python
+final_results = []
+concepts_represented = set()
+for chunk_id, rrf_score in ranked_results:
+    concept_source = chunk_metadata[chunk_id]['concept_id']
+    if concept_source not in concepts_represented:
+        final_results.append({
+            'chunk_id': chunk_id,
+            'rrf_score': rrf_score,
+            'concept': concept_source,
+            'text': chunk_metadata[chunk_id]['text']
+        })
+        concepts_represented.add(concept_source)
+```
+
+**Expected Output:**
+- **Top result (BCS_boundary_completion):** Mechanism of boundary completion in BCS layer
+- **2nd result (BCS):** Overall BCS architecture and function
+- **3rd result (FCS):** Feature contrast system interaction with BCS
+- **4th result (FCS_filling_in):** Filling-in process details
+- **5th result (LAMINART):** LAMINART's role in the feedback hierarchy
+- **6th result (LAMINART_layer23):** Layer 2/3 specifics
+
+This multi-concept, RRF-fused approach ensures both relevance (via graph structure) and diversity (at least one chunk per concept traversed).

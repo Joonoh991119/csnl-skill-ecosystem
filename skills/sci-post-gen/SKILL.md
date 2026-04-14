@@ -347,3 +347,93 @@ execute:
 - ✓ Citation density ≥ 2 per 500 words
 - ✓ Korean grammatical accuracy > 95%
 - ✓ Quarto renders without errors
+
+
+## Worked Example: ART ↔ Sparse Coding Blog Post
+
+**Complete end-to-end walkthrough** demonstrating cross-domain composition:
+
+1. **Domain Detection**
+   - Input: "ART and sparse coding" → detects two computational neuroscience domains
+   - ART → CRMB domain (Carpenter & Grossberg)
+   - Sparse coding → efficient_coding domain (Olshausen & Field)
+   - Classification: cross-domain composition required
+
+2. **Template & Structure**
+   - Selected: `blog_post_template` with cross-domain bridge section
+   - Outline: (1) Intro, (2) ART basics, (3) Sparse coding basics, (4) Unified bridge, (5) Conclusion
+   - Word budget: ~2000 words split 400/400/400/500/300
+
+3. **Citation Placement**
+   - ART section: Carpenter & Grossberg (CRMB Ch.3), Grossberg 1987
+   - Sparse coding section: Olshausen & Field 1996, Lewicki & Sejnowski 2000
+   - Bridge: Srinivasan et al. 2000 (efficient coding theory unifies both)
+
+4. **Equation Embedding**
+   - Inline for intuitive equations: "$\rho \leq 0.5$" (similarity threshold)
+   - Display for key derivations: "$$J(\theta) = \|x - D\theta\|_2^2 + \lambda\|\theta\|_1$$" (sparse coding objective)
+   - Quarto: wrap in `$...$` (inline) or `$$...$$` (display)
+
+5. **Figure Request to sci-viz Skill**
+   ```
+   "Generate orientation tuning curve comparing ART selectivity vs sparse coding basis functions. 
+   Style: publication-quality. Format: SVG. Caption: Figure 1: ART weight matrix selectivity 
+   vs learned sparse basis for natural image patches."
+   ```
+
+6. **Quarto Output** (.qmd)
+   ```markdown
+   ---
+   title: "Bridging ART and Sparse Coding"
+   author: "sci-post-gen"
+   format: html
+   ---
+   
+   ## Introduction
+   [400 words on complementary roles]
+   
+   ## Adaptive Resonance Theory
+   [ART mechanics, $\rho$ threshold, vigilance parameter]
+   
+   [Figure: Orientation selectivity] <!-- sci-viz output -->
+   
+   ## Sparse Coding
+   [Efficient coding hypothesis, $$J(\theta) = ...$$]
+   
+   ## Unified Bridge
+   [How ART clustering + sparse coding optimization converge]
+   
+   ## Conclusion
+   [Summary, future directions]
+   ```
+
+---
+
+## sci-viz Skill Integration Protocol
+
+**How to invoke sci-viz for figures within sci-post-gen:**
+
+### Figure Request Structure
+```python
+figure_request = {
+    "type": "orientation_tuning",           # plot type
+    "data": {
+        "art_selectivity": [...],           # numpy array or path
+        "sparse_basis": [...],
+        "stimulus_params": {"contrasts": [0.1, 0.5, 1.0]}
+    },
+    "style": "publication",                 # figstyle
+    "format": "svg",                        # output format (svg/png/pdf)
+    "dpi": 300,
+    "caption": "Figure 1: Orientation selectivity comparison",
+    "width_inches": 4,
+    "height_inches": 3
+}
+```
+
+### Invocation
+1. Construct request dict with domain-specific data
+2. Call sci-viz: `request_figure(figure_request)`
+3. Receive SVG/PNG asset + caption metadata
+4. Embed in Quarto: `![caption](figure-uuid.svg)`
+5. Update references in bibliography if sci-viz generates citations

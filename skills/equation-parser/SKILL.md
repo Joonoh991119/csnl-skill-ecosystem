@@ -940,3 +940,151 @@ brew install imagemagick
 - **rag-pipeline**: Consumes equation_chunks table for hybrid search
 - **efficient-coding-domain**: Cross-domain equations (information theory, sparse coding)
 - **eval-runner**: Tests equation retrieval quality
+
+---
+
+## 9. Cross-Domain: Efficient Coding Notation (Wei & Stocker, Barlow, Olshausen)
+
+```python
+EFFICIENT_CODING_NOTATION = {
+    r'J(\theta)': {
+        "name": "Fisher information matrix",
+        "korean": "피셔 정보 행렬",
+        "domain": "efficient_coding",
+        "description": "Measures precision of neural encoding at stimulus θ",
+    },
+    r'p_{prior}(\theta)': {
+        "name": "efficient prior",
+        "korean": "효율적 사전 분포",
+        "domain": "efficient_coding",
+        "description": "Prior proportional to sqrt(Fisher info): p(θ) ∝ J(θ)^(1/2)",
+    },
+    r'I(X;Y)': {
+        "name": "mutual information",
+        "korean": "상호정보량",
+        "domain": "efficient_coding",
+        "description": "Information transmitted between stimulus X and neural response Y",
+    },
+    r'\phi_i': {
+        "name": "sparse basis function",
+        "korean": "희소 기저 함수",
+        "domain": "efficient_coding",
+        "description": "i-th learned basis function (Olshausen & Field 1996)",
+    },
+    r'g_{ij}': {
+        "name": "Fisher-Rao metric tensor",
+        "korean": "피셔-라오 계량 텐서",
+        "domain": "efficient_coding",
+        "description": "Riemannian metric on statistical manifold",
+    },
+    r'\nabla': {
+        "name": "gradient/covariant derivative",
+        "korean": "기울기/공변 미분",
+        "domain": "efficient_coding",
+        "description": "Gradient operator; in information geometry, covariant derivative",
+    },
+    r'D_{KL}': {
+        "name": "KL divergence",
+        "korean": "쿨백-라이블러 발산",
+        "domain": "efficient_coding",
+        "description": "Kullback-Leibler divergence between distributions",
+    },
+    r'E[\cdot]': {
+        "name": "expectation operator",
+        "korean": "기대값 연산자",
+        "domain": "efficient_coding",
+        "description": "Expected value over probability distribution",
+    },
+}
+
+# Merge with Grossberg notation for unified lookup
+ALL_NOTATION = {**GROSSBERG_NOTATION, **EFFICIENT_CODING_NOTATION}
+```
+
+## 10. Non-Standard Symbol Recovery
+
+Handles Grossberg's non-standard notation that confuses standard OCR tools:
+
+```python
+NON_STANDARD_SYMBOL_MAP = {
+    # Fuzzy AND (min operator) — Grossberg uses ∧ for fuzzy AND
+    r'\land': r'\wedge',           # ∧ as fuzzy AND
+    r'\vee': r'\vee',              # ∨ as fuzzy OR
+    r'[x]^+': r'\max(x, 0)',      # Rectification [x]^+ = max(x, 0)
+    r'[x]+': r'\max(x, 0)',       # Alternate OCR rendering
+    r'\lceil x \rceil': r'\max(x, 0)',  # Sometimes OCR misreads rectification
+    
+    # Grossberg-specific shorthands
+    r'STM': 'short-term memory',    # Sometimes in equations as variable name
+    r'LTM': 'long-term memory',
+    r'ON-cell': 'on-center cell',
+    r'OFF-cell': 'off-center cell',
+}
+
+def recover_nonstandard_symbols(latex: str) -> tuple:
+    """Attempt to recover non-standard symbols that OCR may have mangled.
+    Returns (corrected_latex, corrections_made)."""
+    corrections = []
+    corrected = latex
+    
+    # [x]^+ rectification pattern (multiple OCR variants)
+    rect_patterns = [
+        (r'\[(\w+)\]\^?\+', r'\\max(\1, 0)'),       # [x]+ or [x]^+
+        (r'\[([^]]+)\]\^?\{?\+\}?', r'\\max(\1, 0)'), # [expr]^{+}
+    ]
+    for pattern, replacement in rect_patterns:
+        if re.search(pattern, corrected):
+            corrected = re.sub(pattern, replacement, corrected)
+            corrections.append(f"rectification: {pattern} → max(·, 0)")
+    
+    # Fuzzy AND: ∧ might be parsed as logical AND instead of min
+    if r'\wedge' in corrected or r'\land' in corrected:
+        # In Grossberg context, ∧ = min (fuzzy AND)
+        corrections.append("fuzzy_AND: ∧ interpreted as min operator")
+    
+    # Missing subscript braces: B_ijk → B_{ijk}
+    corrected = re.sub(r'([A-Z])_([a-z]{2,})', r'\1_{\2}', corrected)
+    if corrected != latex:
+        corrections.append("subscript_braces: added {} around multi-char subscripts")
+    
+    return corrected, corrections
+```
+
+## 11. Cross-Domain Equation Linking
+
+```python
+CROSS_DOMAIN_BRIDGES = {
+    ("ART_vigilance", "Fisher_information"): {
+        "relationship": "precision_analogy",
+        "explanation": "ART vigilance ρ controls matching precision; Fisher info J(θ) quantifies encoding precision. Both serve as precision parameters in their respective frameworks.",
+        "korean": "ART 경계 매개변수(ρ)와 피셔 정보(J(θ))는 각각의 프레임워크에서 정밀도 매개변수로 기능합니다.",
+        "crmb_chapter": 3,
+        "ec_paper": "Wei & Stocker 2015",
+    },
+    ("BCS_orientation", "sparse_basis"): {
+        "relationship": "representation_analogy",
+        "explanation": "BCS orientation columns detect oriented edges; sparse coding basis functions φ_i learn oriented Gabor-like filters. Both achieve orientation selectivity.",
+        "korean": "BCS 방위 컬럼과 희소 부호화 기저 함수는 모두 방위 선택성을 구현합니다.",
+        "crmb_chapter": 5,
+        "ec_paper": "Olshausen & Field 1996",
+    },
+    ("FCS_diffusion", "efficient_representation"): {
+        "relationship": "efficiency_analogy",
+        "explanation": "FCS filling-in uses boundary-gated diffusion for efficient surface representation; efficient coding minimizes redundancy in neural representation.",
+        "korean": "FCS 채움과 효율적 부호화는 모두 신경 표상의 효율성을 추구합니다.",
+        "crmb_chapter": 5,
+        "ec_paper": "Barlow 1961",
+    },
+}
+
+def find_cross_domain_links(eq_a_domain: str, eq_b_domain: str, 
+                             eq_a_tags: list, eq_b_tags: list) -> list:
+    """Find cross-domain bridges between two equations from different domains."""
+    links = []
+    for (concept_a, concept_b), bridge in CROSS_DOMAIN_BRIDGES.items():
+        a_match = any(concept_a.lower() in tag.lower() for tag in eq_a_tags)
+        b_match = any(concept_b.lower() in tag.lower() for tag in eq_b_tags)
+        if (a_match and b_match) or (b_match and a_match):
+            links.append(bridge)
+    return links
+```
