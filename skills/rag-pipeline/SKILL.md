@@ -514,6 +514,21 @@ CRMB's `chunker_v2.py` already handles Marker-parsed markdown. The skill's
 section-aware chunking complements this by adding academic paper section detection
 on top of the existing chunk boundaries.
 
+### FlagEmbedding vs sentence-transformers
+CRMB_tutor uses `FlagEmbedding.BGEM3FlagModel` (3-signal: dense + sparse + ColBERT)
+while this skill defaults to `sentence_transformers.SentenceTransformer` (dense-only).
+
+For CRMB compatibility, use FlagEmbedding instead:
+```python
+from FlagEmbedding import BGEM3FlagModel
+model = BGEM3FlagModel("BAAI/bge-m3", device="mps", use_fp16=True)
+# 3-signal embedding:
+output = model.encode(texts, return_dense=True, return_sparse=True, return_colbert_vecs=False)
+dense_vecs = output['dense_vecs']     # (N, 1024)
+sparse_weights = output['lexical_weights']  # sparse BM25-like
+```
+RRF weights from CRMB: dense=0.50, sparse=0.30, colbert=0.20 (k=60).
+
 ## Integration Points
 
 - **Zotero MCP**: Use `search_library` → `get_content` for document ingestion
