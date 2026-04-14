@@ -491,3 +491,320 @@ Total XP: 1089 | Aha Moments: 2
 Failure Detected: False | Recovery: N/A
 Hook Distribution: {'역설': 3, '연결': 2, '역사': 1, '함축': 4, '오개념': 3, '경계': 2}
 ```
+
+
+---
+
+## ART Domain Content (Adaptive Resonance Theory)
+
+### Overview
+Integrates Adaptive Resonance Theory (ART) concepts into conversation simulation for more cognitively plausible learning trajectories. ART models how learners balance plasticity (accepting new knowledge) with stability (preserving existing knowledge).
+
+### ART Concepts for Simulation
+
+**Category Learning & Vigilance Parameter**
+- Vigilance ρ ∈ [0,1]: How strict pattern matching is. High ρ = learner demands category must match input closely.
+- Learner types: Perfectionists (ρ=0.9), Pragmatists (ρ=0.5), Scanners (ρ=0.2)
+- Template: "이 {}가 {} 범주에 들어가나요?" (Does this X fit Y category?)
+
+**Top-Down Templates vs Bottom-Up Features**
+- Templates (기준): Prior knowledge, misconceptions, schemas
+- Features (특징): Immediate sensory/linguistic input details
+- Mismatch triggers reset → new category learning
+- Question: "처음엔 {}라고 생각했는데 실제론 다르네요. 왜죠?" (I thought it was X, but it's actually Y. Why?)
+
+**Resonance & Reset Signals**
+- Resonance: Input matches category template → stable learning
+- Reset: Mismatch → vigilance increases → category splits
+- Engagement reflects resonance level (high resonance = high engagement)
+- Question: "{}를 이전 내용과 연결할 수 있나요?" (Can you link X to prior content?)
+
+### Implementation Integration
+
+```python
+@dataclass
+class ARTState:
+    vigilance: float = 0.5  # Category matching strictness
+    templates: Dict[str, List[str]] = field(default_factory=dict)  # Knowledge structures
+    resonance: float = 0.0  # Current match quality
+    reset_count: int = 0  # Mismatch incidents
+
+def assess_art_resonance(user_msg: str, template: str, vigilance: float) -> float:
+    """Match input against category template; resonance ∈ [0,1]"""
+    match_score = len(set(user_msg.split()) & set(template.split())) / max(len(template.split()), 1)
+    return match_score if match_score >= vigilance else 0.0
+
+def trigger_category_reset(state: ARTState) -> None:
+    """Learner experienced mismatch; increase vigilance and split categories"""
+    state.vigilance = min(1.0, state.vigilance + 0.1)
+    state.reset_count += 1
+```
+
+
+
+---
+
+## Multi-Seed Batch Runner with Aggregated Metrics
+
+### Purpose
+Run N independent simulations with different random seeds to compute robust aggregate statistics (mean, std, confidence intervals) for engagement, XP, recovery success, and other metrics. Reduces noise from single-run variance.
+
+### Implementation
+
+```python
+import statistics
+from typing import List, Dict, Tuple
+
+def batch_simulate(domain: Domain, profile: Profile, config: Dict, 
+                   num_turns: int = 15, num_runs: int = 10, base_seed: int = 42) -> Dict:
+    """
+    Run N simulations with aggregated metrics.
+    
+    Args:
+        domain: CRMB or CODING
+        profile: BEGINNER, INTERMEDIATE, EXPERT
+        config: Hook frequency, challenge level, XP multiplier
+        num_turns: Turns per simulation
+        num_runs: Number of independent runs
+        base_seed: Starting seed (incremented per run)
+    
+    Returns:
+        Aggregated statistics: mean/std/CI for each metric
+    """
+    results = []
+    
+    for i in range(num_runs):
+        random.seed(base_seed + i)
+        runner = ConversationRunner(domain, profile, num_turns, config)
+        metrics = runner.run()
+        results.append(asdict(metrics))
+    
+    return aggregate_metrics(results)
+
+def aggregate_metrics(results: List[Dict]) -> Dict:
+    """Compute mean, std, 95% CI for all numeric metrics"""
+    aggregated = {}
+    
+    # Extract numeric fields
+    numeric_keys = ["avg_engagement", "misconceptions_resolved", "total_xp", "aha_moments"]
+    
+    for key in numeric_keys:
+        values = [r[key] for r in results]
+        mean_val = statistics.mean(values)
+        std_val = statistics.stdev(values) if len(values) > 1 else 0
+        ci_margin = 1.96 * std_val / (len(values) ** 0.5)  # 95% CI
+        
+        aggregated[key] = {
+            "mean": round(mean_val, 2),
+            "std": round(std_val, 2),
+            "ci_lower": round(mean_val - ci_margin, 2),
+            "ci_upper": round(mean_val + ci_margin, 2),
+        }
+    
+    # Recovery success rate
+    recovery_successes = sum(1 for r in results if r.get("recovery_success"))
+    aggregated["recovery_success_rate"] = round(recovery_successes / len(results), 2)
+    
+    return aggregated
+
+def run_batch(domain: Domain, profile: Profile, num_runs: int = 10):
+    """CLI entry point for batch simulation"""
+    config = {"hook_frequency": 0.5, "challenge_level": 0.5, "xp_multiplier": 1.0}
+    agg = batch_simulate(domain, profile, config, num_turns=15, num_runs=num_runs)
+    
+    print(f"\n=== Batch Results ({num_runs} runs) ===")
+    print(f"Domain: {domain.value} | Profile: {profile.value}")
+    for metric, stats in agg.items():
+        if isinstance(stats, dict):
+            print(f"{metric}:")
+            print(f"  mean={stats['mean']}, std={stats['std']}, "
+                  f"95% CI=[{stats['ci_lower']}, {stats['ci_upper']}]")
+        else:
+            print(f"{metric}: {stats}")
+```
+
+### Usage
+
+```bash
+# Beginner CRMB: 10 runs with aggregated stats
+python conversation-sim.py --mode batch --domain crmb --profile beginner --num_runs 10
+
+# Expert Coding: 20 runs for tighter CI
+python conversation-sim.py --mode batch --domain coding --profile expert --num_runs 20
+```
+
+### Output Example
+
+```
+=== Batch Results (10 runs) ===
+Domain: crmb | Profile: intermediate
+avg_engagement:
+  mean=68.45, std=7.32, 95% CI=[62.98, 73.92]
+misconceptions_resolved:
+  mean=2.8, std=1.03, 95% CI=[2.18, 3.42]
+total_xp:
+  mean=1024.5, std=142.3, 95% CI=[920.4, 1128.6]
+recovery_success_rate: 0.7
+```
+
+
+
+---
+
+## Strategy Pivot on Disengagement
+
+### Overview
+Detects topic fatigue, confusion, and boredom mid-conversation and switches to an alternate domain (CRMB ↔ Efficient Coding) with increased hook frequency to re-engage learner. Tracks pivot effectiveness.
+
+### Disengagement Detection
+
+Three fatigue signals:
+
+| Signal | Indicator | Threshold |
+|--------|-----------|-----------|
+| **Confusion** | Misconception addressed but engagement still drops | Δeng < -5 for 2+ turns |
+| **Boredom** | Hook effectiveness flat despite variety | Resonance < 0.3 for 3+ turns |
+| **Topic Fatigue** | Same domain questions repeat, engagement floor hit | Engagement = engagement_floor for 2 turns |
+
+### Domain Pivot Strategy
+
+```python
+class EngagementMonitor:
+    def __init__(self, engagement_floor: float = 0.5):
+        self.engagement_floor = engagement_floor
+        self.disengagement_window = []
+        self.fatigue_type = None
+        
+    def detect_fatigue(self, engagement: float, resonance: float, 
+                       prev_engagement: float, topic_diversity: float) -> str:
+        """Classify fatigue type; returns None or 'confusion'|'boredom'|'topic_fatigue'"""
+        self.disengagement_window.append({
+            "engagement": engagement,
+            "resonance": resonance,
+            "delta": engagement - prev_engagement,
+        })
+        
+        if len(self.disengagement_window) > 3:
+            self.disengagement_window.pop(0)
+        
+        # Confusion: steep drop despite educational content
+        if sum(w["delta"] for w in self.disengagement_window[-2:]) < -10:
+            return "confusion"
+        
+        # Boredom: low resonance persists
+        if sum(w["resonance"] for w in self.disengagement_window) / len(self.disengagement_window) < 0.3:
+            return "boredom"
+        
+        # Topic fatigue: at floor
+        if engagement <= self.engagement_floor:
+            return "topic_fatigue"
+        
+        return None
+
+def execute_pivot(current_domain: Domain, fatigue_type: str) -> Tuple[Domain, Dict]:
+    """Switch domain and adjust config based on fatigue type"""
+    alt_domain = Domain.CODING if current_domain == Domain.CRMB else Domain.CRMB
+    
+    adjustments = {
+        "confusion": {
+            "hook_frequency": 0.8,  # More frequent hooks
+            "challenge_level": 0.3,  # Simplify explanations
+            "xp_multiplier": 1.3,  # Reward persistence
+            "skip_turns": 2,  # Brief recap before switching
+        },
+        "boredom": {
+            "hook_frequency": 0.9,
+            "challenge_level": 0.7,  # Increase novelty
+            "xp_multiplier": 1.5,
+            "skip_turns": 1,
+        },
+        "topic_fatigue": {
+            "hook_frequency": 1.0,
+            "challenge_level": 0.5,
+            "xp_multiplier": 1.2,
+            "skip_turns": 0,
+        },
+    }
+    
+    return alt_domain, adjustments[fatigue_type]
+```
+
+### Pivot Effectiveness Tracking
+
+```python
+@dataclass
+class PivotEvent:
+    turn_num: int
+    fatigue_type: str
+    from_domain: Domain
+    to_domain: Domain
+    pre_pivot_engagement: float
+    post_pivot_engagement: float
+    success: bool  # True if engagement recovered to > 65% by turn 20
+
+def track_pivot_effectiveness(pivots: List[PivotEvent]) -> Dict:
+    """Summarize pivot success rates and engagement recovery patterns"""
+    if not pivots:
+        return {"pivot_count": 0}
+    
+    success_by_fatigue = {}
+    for fatigue_type in ["confusion", "boredom", "topic_fatigue"]:
+        relevant = [p for p in pivots if p.fatigue_type == fatigue_type]
+        if relevant:
+            success_rate = sum(p.success for p in relevant) / len(relevant)
+            avg_recovery = sum(p.post_pivot_engagement - p.pre_pivot_engagement for p in relevant) / len(relevant)
+            success_by_fatigue[fatigue_type] = {
+                "success_rate": round(success_rate, 2),
+                "avg_engagement_delta": round(avg_recovery, 2),
+            }
+    
+    return {
+        "total_pivots": len(pivots),
+        "success_by_fatigue_type": success_by_fatigue,
+        "avg_pivot_turn": round(sum(p.turn_num for p in pivots) / len(pivots), 1),
+    }
+```
+
+### Integration into ConversationRunner
+
+Add to main simulation loop:
+
+```python
+monitor = EngagementMonitor(engagement_floor=floor)
+pivot_events = []
+
+for turn_num in range(1, self.num_turns + 1):
+    fatigue = monitor.detect_fatigue(
+        engagement=self.user.state.engagement,
+        resonance=current_resonance,
+        prev_engagement=prev_engagement,
+        topic_diversity=topic_variety
+    )
+    
+    if fatigue:
+        new_domain, adjustments = execute_pivot(self.domain, fatigue)
+        self.domain = new_domain
+        self.config.update(adjustments)
+        pivot_events.append(PivotEvent(
+            turn_num=turn_num,
+            fatigue_type=fatigue,
+            from_domain=prev_domain,
+            to_domain=new_domain,
+            pre_pivot_engagement=self.user.state.engagement,
+        ))
+    
+    # ... rest of turn logic ...
+    
+    if pivot_events and pivot_events[-1].turn_num == turn_num - 1:
+        # Check if pivot was successful
+        pivot_events[-1].post_pivot_engagement = self.user.state.engagement
+        pivot_events[-1].success = self.user.state.engagement > 65
+```
+
+### Testing Checklist
+
+- [ ] Confusion pivot: Trigger at turn 5 (bad explanation), verify domain switch and challenge reduction
+- [ ] Boredom pivot: Run 10 turns same domain, verify pivot to alt domain at turn 8-10
+- [ ] Topic fatigue pivot: Expert profile with no hooks, verify immediate pivot
+- [ ] Recovery metric: Track post-pivot engagement recovery within 3 turns
+- [ ] Korean quality: Verify transition dialogue is natural ("이제 다른 주제로 전환해볼까요?")

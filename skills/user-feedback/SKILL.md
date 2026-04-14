@@ -379,3 +379,166 @@ payload = metrics.get_dashboard_payload()
 - Unit tests: sentiment classification on Korean/English samples
 - Integration tests: feedback → evolution job → parameter update
 - Privacy tests: anonymization, consent enforcement
+
+
+## Gap 1: Component-Specific Feedback Patterns
+
+**Pattern-Based Feedback Classification**
+
+Maps user feedback strings to specific component failures, distinguishing retrieval errors from generation quality issues:
+
+```python
+class ComponentPatternMatcher:
+    """Route feedback to specific components via pattern matching."""
+    
+    def __init__(self):
+        self.patterns = {
+            "retrieval_failure": {
+                "korean": ["답변이 관련없어요", "주제를 벗어났어", "이건 아닌 것 같아"],
+                "english": ["wrong topic", "irrelevant answer", "off-topic"],
+                "component": "rag_pipeline",
+                "action": "increase_retrieval_depth"
+            },
+            "generation_quality": {
+                "korean": ["설명이 너무 얕아요", "좀 더 자세히", "부족해"],
+                "english": ["too shallow", "not enough detail", "incomplete"],
+                "component": "prompt_template",
+                "action": "tune_system_prompt"
+            },
+            "korean_naturalness": {
+                "korean": ["한국어가 부자연스러워요", "어색한 표현", "뭔가 이상해"],
+                "english": ["awkward Korean", "unnatural phrasing"],
+                "component": "prompt_template",
+                "action": "add_korean_guidance"
+            },
+            "difficulty_calibration": {
+                "korean": ["너무 어려워요", "이해를 못했어", "어렵다"],
+                "english": ["too hard", "too difficult", "don't understand"],
+                "component": "expertise_estimator",
+                "action": "decrease_difficulty"
+            },
+            "engagement": {
+                "korean": ["재미없어요", "지겨워", "흥미로운 게 없네"],
+                "english": ["boring", "not engaging", "uninteresting"],
+                "component": "curiosity_modulator",
+                "action": "increase_engagement"
+            }
+        }
+    
+    def classify_and_route(self, feedback_text: str, language: str = "ko"):
+        """Match feedback to component and suggest action."""
+        for pattern_key, pattern_data in self.patterns.items():
+            patterns_list = pattern_data.get("korean" if language == "ko" else "english", [])
+            if any(p in feedback_text for p in patterns_list):
+                return {
+                    "pattern": pattern_key,
+                    "component": pattern_data["component"],
+                    "action": pattern_data["action"],
+                    "confidence": 0.95 if len([p for p in patterns_list if p in feedback_text]) > 0 else 0.7
+                }
+        return {"pattern": "unknown", "component": None, "action": None, "confidence": 0.0}
+```
+
+## Gap 2: Feedback Loop Closure
+
+**Measure Whether Parameter Changes Improved Outcomes**
+
+Track before/after feedback sentiment to verify parameter adjustments succeeded:
+
+```python
+def measure_improvement(before_params: dict, after_params: dict, feedback_window: int = 50):
+    """Compare feedback sentiment distribution before/after param change.
+    
+    Args:
+        before_params: Original parameter state (e.g., {'top_k': 5})
+        after_params: New parameter state (e.g., {'top_k': 10})
+        feedback_window: Number of post-adjustment feedbacks to evaluate
+    
+    Returns:
+        improvement_score (float): Improvement in sentiment [0.0, 1.0]
+        confidence_interval: (lower, upper) bounds for statistical significance
+    """
+    # Query feedback history around param change
+    before_feedback = query_feedback_by_params(before_params, window=feedback_window)
+    after_feedback = query_feedback_by_params(after_params, window=feedback_window)
+    
+    # Compute sentiment distributions
+    before_scores = [entry["sentiment_score"] for entry in before_feedback]
+    after_scores = [entry["sentiment_score"] for entry in after_feedback]
+    
+    before_mean = sum(before_scores) / max(len(before_scores), 1)
+    after_mean = sum(after_scores) / max(len(after_scores), 1)
+    
+    improvement = (after_mean - before_mean) / max(abs(before_mean), 0.01)
+    
+    # Confidence via bootstrap (simplified)
+    import statistics
+    std_err = statistics.stdev(after_scores + before_scores) / (feedback_window ** 0.5)
+    ci_lower = improvement - 1.96 * std_err
+    ci_upper = improvement + 1.96 * std_err
+    
+    return {
+        "improvement_score": max(0.0, min(1.0, improvement)),
+        "confidence_interval": (ci_lower, ci_upper),
+        "before_sentiment_mean": before_mean,
+        "after_sentiment_mean": after_mean,
+        "samples": len(after_feedback)
+    }
+```
+
+## Gap 3: EvolutionBridge Contract
+
+**Concrete Interface with evolve.py**
+
+Standardized job format and priority scoring for parameter evolution:
+
+```python
+class EvolutionBridgeV2:
+    """Concrete interface to evolve.py with strict job schema."""
+    
+    def submit_job(self, component: str, param_path: str, current_value, 
+                   suggested_value, evidence: dict, feedback_volume: int, 
+                   severity_score: float):
+        """Submit parameter evolution job with priority scoring.
+        
+        Job format:
+            {
+                'component': 'rag_pipeline' | 'prompt_template' | 'curiosity_modulator',
+                'param_path': 'top_k' | 'system_prompt' | 'hint_frequency',
+                'current_value': current param value,
+                'suggested_value': proposed new value,
+                'evidence': {
+                    'feedback_ids': [list of supporting feedback IDs],
+                    'pattern_match': 'retrieval_failure' or other pattern,
+                    'improvement_measurement': measure_improvement(...),
+                    'user_count': number of users reporting issue
+                },
+                'priority_score': float [0.0, 1.0],
+                'status': 'pending'
+            }
+        """
+        priority = self._compute_priority(feedback_volume, severity_score)
+        
+        job = {
+            "component": component,
+            "param_path": param_path,
+            "current_value": current_value,
+            "suggested_value": suggested_value,
+            "evidence": evidence,
+            "priority_score": priority,
+            "status": "pending",
+            "submitted_at": self._timestamp()
+        }
+        
+        # Write to evolve.py job queue
+        with open(self.job_queue_path, 'a') as f:
+            json.dump(job, f)
+            f.write('\n')
+        
+        return job
+    
+    def _compute_priority(self, feedback_volume: int, severity: float):
+        """Priority = (feedback_volume * 0.6) + (severity * 0.4), normalized."""
+        raw = (feedback_volume / 100.0) * 0.6 + severity * 0.4
+        return min(1.0, max(0.0, raw))
+```
