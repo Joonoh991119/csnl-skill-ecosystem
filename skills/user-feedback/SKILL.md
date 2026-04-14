@@ -1138,3 +1138,125 @@ def process_feedback_robustly(feedback_text: str, user_id: str) -> dict:
     }
 ```
 ```
+
+## Deep Robustness: Profile-Aware Evolution
+
+```python
+from enum import Enum
+
+class LearnerProfile(Enum):
+    BEGINNER     = "beginner"      # undergrad, first exposure
+    INTERMEDIATE = "intermediate"  # grad student, some background
+    EXPERT       = "expert"         # PhD student, deep familiarity
+
+PROFILE_PARAMETERS = {
+    LearnerProfile.BEGINNER: {
+        "difficulty_range": (0.3, 0.6),
+        "equation_density_max": 0.2,
+        "analogy_rate": 0.8,
+        "korean_english_ratio": 0.9,  # heavy Korean
+        "citation_density": 0.3,      # fewer citations, more intuition
+    },
+    LearnerProfile.INTERMEDIATE: {
+        "difficulty_range": (0.5, 0.8),
+        "equation_density_max": 0.5,
+        "analogy_rate": 0.5,
+        "korean_english_ratio": 0.6,
+        "citation_density": 0.6,
+    },
+    LearnerProfile.EXPERT: {
+        "difficulty_range": (0.7, 1.0),
+        "equation_density_max": 1.0,
+        "analogy_rate": 0.2,
+        "korean_english_ratio": 0.3,  # more English jargon OK
+        "citation_density": 1.0,
+    },
+}
+
+class ProfileAwareEvolutionBridge:
+    """Applies parameter deltas scoped to the learner's profile.
+
+    Prevents the failure mode where a BEGINNER's complaint ('too hard')
+    cascades into dumbing down EXPERT content.
+    """
+    def __init__(self, history_path: str = ".evolution_history.json"):
+        self.history = self._load(history_path)
+        self.history_path = history_path
+
+    def propose_adjustment(self, feedback_item: dict) -> dict:
+        profile = LearnerProfile(feedback_item.get("profile", "intermediate"))
+        complaint = feedback_item.get("category")  # "too_hard", "too_easy", "boring", "confusing"
+        current = feedback_item.get("current_params", {})
+        proposed = dict(current)
+
+        profile_bounds = PROFILE_PARAMETERS[profile]
+        if complaint == "too_hard":
+            proposed["difficulty"] = max(
+                profile_bounds["difficulty_range"][0],
+                current.get("difficulty", 0.7) - 0.1
+            )
+            proposed["analogy_rate"] = min(1.0, current.get("analogy_rate", 0.5) + 0.15)
+        elif complaint == "too_easy":
+            proposed["difficulty"] = min(
+                profile_bounds["difficulty_range"][1],
+                current.get("difficulty", 0.5) + 0.1
+            )
+        elif complaint == "boring":
+            proposed["curiosity_hook_rate"] = min(1.0, current.get("curiosity_hook_rate", 0.3) + 0.2)
+        elif complaint == "confusing":
+            proposed["citation_density"] = min(profile_bounds["citation_density"],
+                                                current.get("citation_density", 0.5) + 0.15)
+
+        # clamp every parameter to its profile bounds
+        for k, v in proposed.items():
+            bound_key = f"{k}_range"
+            if bound_key in profile_bounds:
+                lo, hi = profile_bounds[bound_key]
+                proposed[k] = max(lo, min(hi, v))
+
+        delta = {k: proposed[k] - current.get(k, 0) for k in proposed if proposed[k] != current.get(k)}
+        return {
+            "profile": profile.value,
+            "complaint": complaint,
+            "current": current,
+            "proposed": proposed,
+            "delta": delta,
+            "confidence": self._compute_confidence(feedback_item),
+        }
+
+    def _compute_confidence(self, feedback_item: dict) -> float:
+        # confidence high if: engagement low, feedback specific, profile matches complaint
+        eng = feedback_item.get("engagement", 0.5)
+        specificity = len(feedback_item.get("text", "").split()) / 50  # more words = more specific
+        return min(1.0, (1.0 - eng) * 0.5 + min(specificity, 1.0) * 0.3 + 0.2)
+
+    def record(self, adjustment: dict):
+        import json
+        from datetime import datetime
+        self.history.append({"ts": datetime.utcnow().isoformat(), **adjustment})
+        with open(self.history_path, "w") as f:
+            json.dump(self.history, f, indent=2, ensure_ascii=False)
+
+    def _load(self, path):
+        import os, json
+        if os.path.exists(path):
+            try: return json.load(open(path))
+            except: return []
+        return []
+
+    def detect_profile_drift(self, user_id: str, window: int = 5) -> dict:
+        """If complaints consistently span profile bounds, user may be mis-classified."""
+        recent = [h for h in self.history[-window:] if h.get("user_id") == user_id]
+        if len(recent) < 3: return {"drift": False}
+        profiles = [h["profile"] for h in recent]
+        complaints = [h["complaint"] for h in recent]
+        # heuristic: beginner profile but persistent "too_easy" complaints → promote
+        if profiles.count("beginner") >= 3 and complaints.count("too_easy") >= 2:
+            return {"drift": True, "suggested_profile": "intermediate",
+                    "reason": "persistent_too_easy_in_beginner"}
+        if profiles.count("expert") >= 3 and complaints.count("too_hard") >= 2:
+            return {"drift": True, "suggested_profile": "intermediate",
+                    "reason": "persistent_too_hard_in_expert"}
+        return {"drift": False}
+```
+```

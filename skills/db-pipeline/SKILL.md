@@ -1691,3 +1691,115 @@ def run_full_pipeline_with_deep_robustness(self):
         raise
 ```
 ```
+
+## Deep Robustness: Pre-Migration Gate
+
+```python
+class PreMigrationValidator:
+    """Dry-run a migration against a sample; refuses to proceed if issues found.
+
+    Catches the dimension-mismatch class of failure BEFORE it reaches prod data.
+    Entry point called by workflow-orchestrator's AutoRecoveryExecutor.
+    """
+    CHECKS = [
+        "dimension_match",       # source vec dim == target vec dim
+        "column_compatibility",  # target schema accepts all source columns
+        "sample_insert",         # can we insert a sample row?
+        "index_compat",          # HNSW params compatible with target dim
+        "disk_space",            # enough free space for new table
+        "embedding_model_available",  # BGE-M3 loadable before we delete old embeddings
+    ]
+
+    def __init__(self, conn, source_schema: dict, target_schema: dict):
+        self.conn = conn
+        self.source = source_schema  # e.g. SCHEMA_VERSIONS['v1']
+        self.target = target_schema  # e.g. SCHEMA_VERSIONS['v2']
+        self.results = {}
+
+    def check_dimension_match(self) -> dict:
+        source_dim = self.source.get("vector_dim")
+        target_dim = self.target.get("vector_dim")
+        if source_dim != target_dim:
+            return {"pass": False, "severity": "blocker",
+                    "msg": f"Dimension mismatch: source={source_dim}, target={target_dim}. "
+                           f"Re-embedding required via embed_rag.py before migration."}
+        return {"pass": True}
+
+    def check_column_compatibility(self) -> dict:
+        source_cols = set(self.source.get("columns", []))
+        target_cols = set(self.target.get("columns", []))
+        dropped = source_cols - target_cols
+        if dropped:
+            return {"pass": False, "severity": "warning",
+                    "msg": f"Columns will be dropped: {sorted(dropped)}. Confirm acceptable."}
+        return {"pass": True}
+
+    def check_sample_insert(self, sample_row: dict = None) -> dict:
+        sample_row = sample_row or self._make_dummy_row()
+        try:
+            self.conn.execute("BEGIN")
+            self.conn.execute(self._build_insert_sql(self.target, sample_row))
+            self.conn.execute("ROLLBACK")
+            return {"pass": True}
+        except Exception as e:
+            self.conn.execute("ROLLBACK")
+            return {"pass": False, "severity": "blocker",
+                    "msg": f"Sample insert failed: {e}"}
+
+    def check_index_compat(self) -> dict:
+        target_dim = self.target.get("vector_dim")
+        # HNSW m=16, ef_construction=200 is fine up to 4096 dims
+        if target_dim > 4096:
+            return {"pass": False, "severity": "warning",
+                    "msg": f"HNSW m=16 suboptimal for dim={target_dim}; consider m=32"}
+        return {"pass": True}
+
+    def check_disk_space(self, min_free_gb: float = 5.0) -> dict:
+        import shutil
+        total, used, free = shutil.disk_usage("/")
+        free_gb = free / (1024**3)
+        if free_gb < min_free_gb:
+            return {"pass": False, "severity": "blocker",
+                    "msg": f"Only {free_gb:.1f} GB free; need >={min_free_gb} GB"}
+        return {"pass": True, "free_gb": round(free_gb, 2)}
+
+    def check_embedding_model_available(self) -> dict:
+        try:
+            from FlagEmbedding import BGEM3FlagModel
+            _ = BGEM3FlagModel  # just check import; don't load weights
+            return {"pass": True}
+        except Exception as e:
+            return {"pass": False, "severity": "blocker",
+                    "msg": f"BGE-M3 unavailable: {e}. pip install FlagEmbedding"}
+
+    def run_all(self) -> dict:
+        for name in self.CHECKS:
+            method = getattr(self, f"check_{name}", None)
+            if method:
+                self.results[name] = method()
+        blockers = [n for n, r in self.results.items()
+                    if not r.get("pass") and r.get("severity") == "blocker"]
+        warnings = [n for n, r in self.results.items()
+                    if not r.get("pass") and r.get("severity") == "warning"]
+        return {"can_proceed": len(blockers) == 0,
+                "blockers": blockers, "warnings": warnings,
+                "details": self.results}
+
+    def _make_dummy_row(self) -> dict:
+        import numpy as np
+        return {"chapter": 0, "raw_text": "dry-run",
+                "vector": np.zeros(self.target["vector_dim"]).tolist(),
+                "summary": "pre-migration gate"}
+
+    def _build_insert_sql(self, schema: dict, row: dict) -> str:
+        # simplified; real impl uses parameterized queries
+        cols = [c for c in schema["columns"] if c in row]
+        vals = ", ".join(repr(row[c]) for c in cols)
+        return f"INSERT INTO {schema.get('table_name', 'chunks_v2')} ({', '.join(cols)}) VALUES ({vals})"
+
+
+def dry_run_migration(conn, source_schema: str = "v1", target_schema: str = "v2") -> dict:
+    validator = PreMigrationValidator(conn, SCHEMA_VERSIONS[source_schema], SCHEMA_VERSIONS[target_schema])
+    return validator.run_all()
+```
+```

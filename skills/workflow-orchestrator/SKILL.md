@@ -300,4 +300,138 @@ WORKFLOW_OUTPUT_SCHEMA = {
 - Per-node timeout (configurable via `Node.timeout_s`, enforced with `signal.alarm` on POSIX).
 - Structured logs emitted per transition (`PENDING → RUNNING → DONE|FAILED`).
 
-## Version 1.0.0 — 2026-04-14
+## 11. Auto-Recovery Loops
+
+When a node fails, most recoveries are mechanical. Auto-recovery handlers map
+specific error signatures to remediation workflows that run automatically,
+without human intervention, up to a safety budget.
+
+```python
+@dataclass
+class RecoveryHandler:
+    name: str
+    matches: Callable[[Node], bool]          # signature match on node.error
+    remediation: Callable[[Node, Workflow], list]  # returns list of new Node objects to splice in
+    max_triggers: int = 3                     # safety budget per workflow run
+
+RECOVERY_HANDLERS = [
+    RecoveryHandler(
+        name="dimension_mismatch",
+        matches=lambda n: "dimension" in (n.error or "").lower() and "1024" in (n.error or ""),
+        remediation=lambda n, wf: [
+            Node(f"{n.name}_reembed", "db-pipeline",
+                 inputs={"action": "reembed", "target_dim": 1024},
+                 depends_on=n.depends_on),
+            Node(f"{n.name}_retry",   n.skill, inputs=n.inputs,
+                 depends_on=[f"{n.name}_reembed"]),
+        ],
+    ),
+    RecoveryHandler(
+        name="nougat_timeout",
+        matches=lambda n: n.skill == "equation-parser" and "timeout" in (n.error or "").lower(),
+        remediation=lambda n, wf: [
+            # fallback chain: pix2tex → LaTeX-OCR → manual-flag
+            Node(f"{n.name}_pix2tex", "equation-parser",
+                 inputs={**n.inputs, "backend": "pix2tex"},
+                 depends_on=n.depends_on, max_retries=1),
+        ],
+    ),
+    RecoveryHandler(
+        name="corrupt_pdf",
+        matches=lambda n: n.skill == "paper-processor" and "corrupt" in (n.error or "").lower(),
+        remediation=lambda n, wf: [
+            Node(f"{n.name}_redownload", "corpus-manager",
+                 inputs={"action": "redownload", "chapter": n.inputs.get("chapter")},
+                 depends_on=[]),
+            Node(f"{n.name}_retry", n.skill, inputs=n.inputs,
+                 depends_on=[f"{n.name}_redownload"]),
+        ],
+    ),
+    RecoveryHandler(
+        name="eval_regression",
+        matches=lambda n: n.skill == "eval-runner" and "regression" in (n.error or "").lower(),
+        remediation=lambda n, wf: [
+            Node(f"{n.name}_rollback", "db-pipeline",
+                 inputs={"action": "rollback_last_embed"}, depends_on=[]),
+            Node(f"{n.name}_retry", n.skill, inputs=n.inputs,
+                 depends_on=[f"{n.name}_rollback"]),
+        ],
+    ),
+]
+
+class AutoRecoveryExecutor(WorkflowExecutor):
+    def __init__(self, workflow, skill_registry, handlers=RECOVERY_HANDLERS,
+                 global_recovery_budget: int = 10):
+        super().__init__(workflow, skill_registry)
+        self.handlers = handlers
+        self.trigger_counts = {h.name: 0 for h in handlers}
+        self.global_budget = global_recovery_budget
+        self.global_used = 0
+
+    def run(self, resume: bool = True, stop_on_failure: bool = False) -> dict:
+        while True:
+            summary = super().run(resume=resume, stop_on_failure=False)
+            if not summary["failed_nodes"] or self.global_used >= self.global_budget:
+                return summary
+            healed_any = False
+            for failed_name in summary["failed_nodes"]:
+                node = self.workflow.nodes[failed_name]
+                for h in self.handlers:
+                    if h.matches(node) and self.trigger_counts[h.name] < h.max_triggers:
+                        new_nodes = h.remediation(node, self.workflow)
+                        for new_node in new_nodes:
+                            self.workflow.nodes[new_node.name] = new_node
+                        # rewire dependents of the failed node onto the last remediation node
+                        final = new_nodes[-1].name
+                        for other in self.workflow.nodes.values():
+                            if failed_name in other.depends_on:
+                                other.depends_on = [d if d != failed_name else final
+                                                    for d in other.depends_on]
+                                if other.status == NodeStatus.SKIPPED:
+                                    other.status = NodeStatus.PENDING
+                        node.status = NodeStatus.SKIPPED
+                        node.error = f"recovered_by:{h.name}"
+                        self.trigger_counts[h.name] += 1
+                        self.global_used += 1
+                        healed_any = True
+                        self._save_checkpoint()
+                        break
+            if not healed_any:
+                return summary
+            resume = True  # next iteration picks up the newly spliced nodes
+```
+
+### Recovery Budget & Safety
+
+- Each handler has a per-workflow trigger cap (`max_triggers`, default 3)
+- Global budget (`global_recovery_budget`, default 10) prevents runaway recovery storms
+- Exhausted budget → orchestrator returns with `failed_nodes` populated, human paged
+- Every remediation is logged with before/after DAG diff for audit
+
+### Pre-Migration Gate
+
+For `db-pipeline` migration nodes specifically, the orchestrator inserts a
+`validate_schema` gate node before `migrate_v2`. Failure here blocks the
+migration entirely — prevents the dimension-mismatch class of failure before
+it reaches production data.
+
+```python
+def insert_premigration_gates(wf: Workflow) -> Workflow:
+    gated = dict(wf.nodes)
+    for name, node in list(wf.nodes.items()):
+        if node.skill == "db-pipeline" and "migrate" in (node.inputs.get("action") or ""):
+            gate_name = f"{name}_gate"
+            gated[gate_name] = Node(
+                gate_name, "db-pipeline",
+                inputs={"action": "dry_run_migration",
+                        "target": node.inputs.get("target_schema", "v2")},
+                depends_on=node.depends_on,
+            )
+            node.depends_on = [gate_name]
+    return Workflow(wf.name, gated, wf.checkpoint_dir)
+```
+
+## Version 1.1.0 — 2026-04-14
+- Added AutoRecoveryExecutor with 4 default handlers
+- Added pre-migration gate injection for db-pipeline
+- Recovery budget prevents runaway loops

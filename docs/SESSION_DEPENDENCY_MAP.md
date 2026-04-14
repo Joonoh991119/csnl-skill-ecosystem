@@ -1,15 +1,22 @@
-# Inter-Session Dependency Map (v3)
+# Inter-Session Dependency Map (v4)
 
 ## Ecosystem Status
 
 ```
-Repository: csnl-skill-ecosystem @ 98b1136
-Mirror: CRMB_tutor @ 3e1ef12
-Skills: 12 | Lines: 9469 | Validation: ALL PASS
+Repository: csnl-skill-ecosystem @ HEAD
+Mirror: CRMB_tutor @ HEAD
+Skills: 14 | Lines: ~13500 | Validation: ALL PASS
 Ground Truth: 85 queries (5/chapter × 17 chapters)
-Eval Coverage: 36/36 (P1+P2+P3 × 12 skills)
-Meta-review: AUDIT_v3 → 7.5/10 (pre-v3 patches)
+Eval Coverage: 36/36 (P1+P2+P3 × 12 core skills; corpus-manager & workflow-orchestrator new)
+Meta-review: AUDIT_v4 → 72/100
+Cross-skill integration: v3 → 7.5/10 (was 6/10 in v2)
 ```
+
+## New in v4
+- corpus-manager: lifecycle for CRMB chapters + external papers, SHA-256 versioning
+- workflow-orchestrator: DAG executor with AutoRecoveryExecutor (4 handlers)
+- db-pipeline: PreMigrationValidator (6 checks, blocks dim-mismatch class)
+- user-feedback: ProfileAwareEvolutionBridge (prevents beginner→expert param cascade)
 
 ## Skill Inventory
 
