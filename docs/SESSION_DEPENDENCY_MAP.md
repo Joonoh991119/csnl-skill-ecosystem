@@ -1,18 +1,37 @@
-# Inter-Session Dependency Map
+# Inter-Session Dependency Map (Updated)
 
-## Ecosystem Overview
+## Ecosystem Status
 
 ```
-Total: 11 skills, 5885 lines
-Status: All 11 PASS validation (YAML frontmatter + description ≤1024 chars)
-Repos: csnl-skill-ecosystem (primary), CRMB_tutor (integration)
+Repository: csnl-skill-ecosystem @ 12bce6f
+Mirror: CRMB_tutor @ e4cdbd0
+Skills: 12 | Lines: 7911 | Validation: ALL PASS
+Meta-review: AUDIT_v3 → 7.5/10
 ```
+
+## Skill Inventory
+
+| Skill | Lines | Evals | Best Score | Domain |
+|-------|-------|-------|-----------|--------|
+| equation-parser | 1206 | P1(4.5) P2(3.5) P3(0.7→patched) | 4.5 | parsing |
+| db-pipeline | 1024 | P1(4.5) P2(1.5→patched) | 4.5 | infrastructure |
+| rag-pipeline | 920 | P1-P2(patched) P3(0.08→patched) | 4.0 | retrieval |
+| conversation-sim | 811 | P1(2.7→patched) | 3.5 | evaluation |
+| eval-runner | 612 | P1-P2(patched) | 4.0 | evaluation |
+| paper-processor | 589 | P1-P2(patched) | 4.0 | parsing |
+| sci-viz | 560 | P1-P2(patched) | 4.0 | visualization |
+| user-feedback | 545 | P1(2.0→patched) | 3.0 | feedback |
+| ontology-rag | 480 | P1(4.3)+worked example | 4.3 | retrieval |
+| sci-post-gen | 464 | P1(3.3)+worked example | 3.5 | generation |
+| tutor-content-gen | 427 | P1-P2(patched) | 4.0 | generation |
+| efficient-coding-domain | 273 | P1(4.3) | 4.3 | domain |
 
 ## Session → Skill Matrix
 
 | Skill | DB개선 | Ontology RAG | Post Gen v2 | Addictive Conv | User Feedback |
 |-------|--------|-------------|-------------|----------------|---------------|
 | db-pipeline | **P0** | | | | |
+| equation-parser | **P0** | P1 | P1 | P2 | |
 | paper-processor | **P0** | P1 | | | |
 | rag-pipeline | **P0** | **P0** | P2 | | P2 |
 | ontology-rag | P1 | **P0** | | | |
@@ -24,102 +43,63 @@ Repos: csnl-skill-ecosystem (primary), CRMB_tutor (integration)
 | eval-runner | P1 | P1 | P1 | P1 | P1 |
 | user-feedback | | | | | **P0** |
 
-## Critical Path (Unblocking Order)
+## Critical Path
 
 ```
-db-pipeline + paper-processor (DB 개선)
-    ↓ produces: raw chunks + equations in pgvector
-ontology-rag (ontology 구축)
-    ↓ produces: concept graph + chunk-concept links
-rag-pipeline (hybrid search 연결)
-    ↓ produces: query → ranked chunks
-tutor-content-gen + sci-post-gen (콘텐츠 생성)
-    ↓ produces: grounded educational content
-conversation-sim + eval-runner (평가)
-    ↓ produces: quality metrics + simulated dialogues
-user-feedback (피드백 루프)
-    ↓ produces: improvement signals → evolve.py
+[Layer 0: Infrastructure]
+  db-pipeline → equation-parser → paper-processor
+       ↓ produces: pgvector with raw+equations+figures (1024-dim BGE-M3)
+
+[Layer 1: Retrieval]  
+  ontology-rag → rag-pipeline (Korean multilingual hybrid search)
+       ↓ produces: ranked chunks with citations + ontology expansion
+
+[Layer 2: Generation]
+  tutor-content-gen → sci-post-gen (bilingual, source-grounded)
+       ↓ produces: educational content + blog posts
+
+[Layer 3: Evaluation]
+  eval-runner → conversation-sim (multi-seed, ART domain, strategy pivot)
+       ↓ produces: quality metrics + engagement scores
+
+[Layer 4: Feedback Loop]
+  user-feedback → evolve.py (component routing, Korean sentiment)
+       ↓ produces: parameter adjustments → back to Layer 0
 ```
 
-## Dependency Graph (Skill → Skill)
+## Interface Schemas (Unified)
 
 ```
-paper-processor ──→ rag-pipeline ──→ tutor-content-gen
-       │                │                    │
-       ↓                ↓                    ↓
-  db-pipeline     ontology-rag        sci-post-gen
-       │                │                    │
-       └────────────────┴────────────────────┘
-                        ↓
-                   eval-runner ←── conversation-sim
-                        ↓
-                  user-feedback
-                        ↓
-                   evolve.py (self-improvement loop)
+equation-parser OUTPUT → EQUATION_OUTPUT_SCHEMA
+  ↓ request_id, embedding_config, equations[], citation
+rag-pipeline CITATION → CITATION_SCHEMA  
+  ↓ ref_id, display_text, display_text_ko, bibtex_key
+sci-post-gen INPUT → POST_INPUT_SCHEMA
+  ↓ retrieved_chunks, equations, citations, post_config
 ```
 
-## DB 개선 세션 준비 현황
+## Cross-Domain Bridges (CRMB ↔ Efficient Coding)
 
-### 현재 DB 상태
-- LanceDB: summaries only, 3072-dim (lance_store.py hardcode)
-- 목표: raw text + equations, pgvector, 1024-dim (BGE-M3)
+| CRMB Concept | EC Concept | Bridge Type |
+|---|---|---|
+| ART vigilance (ρ) | Fisher information J(θ) | precision analogy |
+| BCS orientation columns | Sparse coding basis (φ_i) | representation analogy |
+| FCS diffusion | Efficient representation | efficiency analogy |
+| LAMINART laminar circuits | Metabolic constraints | computational analogy |
 
-### DB 세션에서 사용할 스킬
-1. **db-pipeline** (966L) — 전체 파이프라인 오케스트레이터
-   - Current state audit → Marker → Nougat → figure extraction → pgvector migration → re-embed → eval
-2. **paper-processor** (589L) — Marker integration + equation extraction + batch chapter processing
-3. **rag-pipeline** (852L) — pgvector schema versioning + batch re-embedding MPS + before/after eval hook
+## Robustness Status
 
-### DB 세션 실행 순서
-```
-1. db-pipeline: audit_db()          — 현재 LanceDB 상태 확인
-2. paper-processor: run_marker()     — 20챕터 Marker 변환
-3. paper-processor: extract_equations() — Nougat fallback
-4. paper-processor: extract_figures() — PyMuPDF figure extraction
-5. rag-pipeline: migrate_v1_to_v2()  — pgvector 스키마 마이그레이션
-6. rag-pipeline: batch_reembed_mps() — BGE-M3 재임베딩 (MPS)
-7. eval-runner: before_after_eval()  — 품질 비교
-8. db-pipeline: generate_report()    — 최종 리포트
-```
+| Skill | Robustness | Key Patch |
+|-------|-----------|-----------|
+| equation-parser | Checkpoint + cross-page stitch + Nougat retry + Unicode fix |
+| db-pipeline | PipelineCheckpoint + mixed-dim detection + smart baseline |
+| rag-pipeline | Korean hybrid weights (dense=0.70) + Mecab + language detection |
 
-## Efficient Coding 도메인 통합 경로
+## Memory: Essential Facts
 
-```
-efficient-coding-domain (용어집 + concept graph + eval queries)
-    ↓
-paper-processor (Efficient Coding 논문 PDF 처리)
-    ↓
-ontology-rag (CRMB 온톨로지에 EC 노드 추가, cross-domain bridges)
-    ↓
-rag-pipeline (두 도메인 통합 검색)
-    ↓
-sci-post-gen / tutor-content-gen (두 도메인 콘텐츠 생성)
-    ↓
-conversation-sim (cross-domain 대화 시뮬레이션)
-```
-
-## Eval Coverage
-
-| Skill | Prompt 1 | Prompt 2 | Score Range |
-|-------|----------|----------|-------------|
-| rag-pipeline | ✅ | ✅ (1.7→patched) | 1.7-4.0 |
-| paper-processor | ✅ | ✅ (1.5→patched) | 1.5-4.0 |
-| eval-runner | ✅ | ✅ (2.3→patched) | 2.3-4.0 |
-| tutor-content-gen | ✅ | ✅ (2.7→patched) | 2.7-4.0 |
-| sci-viz | ✅ | ✅ (1.3→patched) | 1.3-4.0 |
-| ontology-rag | ✅ (4.3) | — | 4.3 |
-| sci-post-gen | ✅ (3.3) | — | 3.3 |
-| conversation-sim | ✅ (2.7) | — | 2.7 |
-| user-feedback | ✅ (2.0) | — | 2.0 |
-| efficient-coding-domain | ✅ (4.3) | — | 4.3 |
-| db-pipeline | — | — | NEW |
-
-## Memory: Key Facts (Pruned)
-
-- CRMB = Grossberg's "Conscious Mind, Resonant Brain" (ART-focused)
-- Embedding: BGE-M3 → 1024-dim (NOT 3072, NOT 1536)
-- RRF weights: dense=0.50, sparse=0.30, colbert=0.20, k=60
-- CRMB_tutor persona: SciSpark
-- Korean primary, English terms inline
-- Apple Silicon: M4 Pro, 64GB, MPS device
+- CRMB = Grossberg's "Conscious Mind, Resonant Brain"
+- BGE-M3: 1024-dim, MPS device, use_fp16=True
+- RRF: en(0.50/0.30/0.20), ko(0.70/0.10/0.20), k=60
+- SciSpark tutor persona, Korean primary
+- M4 Pro 64GB, Apple Silicon MPS
 - Self-evolution: evolve.py + blind evaluator
