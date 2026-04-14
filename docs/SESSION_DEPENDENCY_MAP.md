@@ -1,30 +1,32 @@
-# Inter-Session Dependency Map (Updated)
+# Inter-Session Dependency Map (v3)
 
 ## Ecosystem Status
 
 ```
-Repository: csnl-skill-ecosystem @ 12bce6f
-Mirror: CRMB_tutor @ e4cdbd0
-Skills: 12 | Lines: 7911 | Validation: ALL PASS
-Meta-review: AUDIT_v3 → 7.5/10
+Repository: csnl-skill-ecosystem @ 98b1136
+Mirror: CRMB_tutor @ 3e1ef12
+Skills: 12 | Lines: 9469 | Validation: ALL PASS
+Ground Truth: 85 queries (5/chapter × 17 chapters)
+Eval Coverage: 36/36 (P1+P2+P3 × 12 skills)
+Meta-review: AUDIT_v3 → 7.5/10 (pre-v3 patches)
 ```
 
 ## Skill Inventory
 
-| Skill | Lines | Evals | Best Score | Domain |
-|-------|-------|-------|-----------|--------|
-| equation-parser | 1206 | P1(4.5) P2(3.5) P3(0.7→patched) | 4.5 | parsing |
-| db-pipeline | 1024 | P1(4.5) P2(1.5→patched) | 4.5 | infrastructure |
-| rag-pipeline | 920 | P1-P2(patched) P3(0.08→patched) | 4.0 | retrieval |
-| conversation-sim | 811 | P1(2.7→patched) | 3.5 | evaluation |
-| eval-runner | 612 | P1-P2(patched) | 4.0 | evaluation |
-| paper-processor | 589 | P1-P2(patched) | 4.0 | parsing |
-| sci-viz | 560 | P1-P2(patched) | 4.0 | visualization |
-| user-feedback | 545 | P1(2.0→patched) | 3.0 | feedback |
-| ontology-rag | 480 | P1(4.3)+worked example | 4.3 | retrieval |
-| sci-post-gen | 464 | P1(3.3)+worked example | 3.5 | generation |
-| tutor-content-gen | 427 | P1-P2(patched) | 4.0 | generation |
-| efficient-coding-domain | 273 | P1(4.3) | 4.3 | domain |
+| Skill | Lines | P1 | P2 | P3 | Domain |
+|-------|-------|----|----|-----|--------|
+| equation-parser | 1205 | 4.5 | 3.5 | patched | parsing |
+| db-pipeline | 1023 | 4.5 | patched | 3.0 | infrastructure |
+| ontology-rag | 1002 | 4.3 | 4.0 | 2→patched | retrieval |
+| sci-viz | 952 | 5.0 | patched | 2→patched | visualization |
+| rag-pipeline | 919 | 5.0 | patched | patched | retrieval |
+| sci-post-gen | 882 | 3.3 | 4.0 | 2→patched | generation |
+| conversation-sim | 871 | patched | patched | 3.5 | evaluation |
+| eval-runner | 611 | 5.0 | patched | patched | evaluation |
+| paper-processor | 631 | 5.0 | patched | patched | parsing |
+| user-feedback | 544 | patched | 4.0 | 3.0 | feedback |
+| tutor-content-gen | 463 | 4.0 | patched | patched | generation |
+| efficient-coding-domain | 366 | 4.3 | 4.0 | 2→patched | domain |
 
 ## Session → Skill Matrix
 
@@ -89,11 +91,20 @@ sci-post-gen INPUT → POST_INPUT_SCHEMA
 
 ## Robustness Status
 
-| Skill | Robustness | Key Patch |
-|-------|-----------|-----------|
+| Skill | Key Patches |
+|-------|-------------|
 | equation-parser | Checkpoint + cross-page stitch + Nougat retry + Unicode fix |
 | db-pipeline | PipelineCheckpoint + mixed-dim detection + smart baseline |
 | rag-pipeline | Korean hybrid weights (dense=0.70) + Mecab + language detection |
+| tutor-content-gen | Trap query detection + semantic chain check + uncertainty templates |
+| paper-processor | Subfigure extraction + footnotes + table validation + appendix boundary |
+| conversation-sim | ConversationLogger + diagnose() + AB test significance |
+| sci-viz | NaN handling + outlier normalization + colorblind maps + LaTeX labels |
+| efficient-coding-domain | Disambiguation table + validated bridges + notation conflicts |
+| ontology-rag | Cycle detection + orphan nodes + multi-hop + SPARQL + Korean NLP |
+| sci-post-gen | Cross-domain orchestration + equation validation + CuriosityModulator |
+| user-feedback | EvolutionBridge v2 + Korean sentiment + feedback routing |
+| eval-runner | Bootstrap ground truth v2 (85 queries) + ablation workflow |
 
 ## Memory: Essential Facts
 
