@@ -866,3 +866,54 @@ CITATION_SCHEMA = {
 ```
 
 **Contract:** All upstream equation/chunk citations are normalized to this format. Downstream skill (sci-post-gen) consumes these directly for bibliography generation without re-parsing.
+
+
+## Multilingual & Korean Search
+
+The CRMB tutor uses Korean as primary language. BGE-M3 is already the correct model (multilingual, 1024-dim). The critical gap is BM25 false positives from Korean queries in mixed-language corpus.
+
+### Language-Aware Hybrid Weights
+
+Different RRF weights for Korean vs English:
+
+```python
+LANG_WEIGHTS = {
+    "en": {"dense": 0.50, "sparse": 0.30, "colbert": 0.20},
+    "ko": {"dense": 0.70, "sparse": 0.10, "colbert": 0.20},  # Reduce BM25 for Korean
+}
+```
+
+Korean BM25 is unreliable because: single-character matches (확, 산 vs 확산), no word boundaries in Korean, mixed-script corpus creates false positives.
+
+### Korean Tokenization
+
+Use Mecab for proper Korean tokenization:
+
+```python
+def tokenize_korean(text: str) -> list:
+    from konlpy.tag import Mecab
+    mecab = Mecab()
+    return [word for word, pos in mecab.pos(text) if pos.startswith(('N', 'V'))]
+```
+
+### Language Detection + Routing
+
+Auto-detect query language and apply correct weights:
+
+```python
+def detect_language(text: str) -> str:
+    korean_ratio = sum(1 for c in text if '\uac00' <= c <= '\ud7af') / max(len(text), 1)
+    return "ko" if korean_ratio > 0.3 else "en"
+```
+
+### Multilingual Debugging
+
+Per-language component analysis:
+
+```python
+def debug_multilingual_retrieval(query, results, lang):
+    # Show dense vs sparse contribution per result
+    # Flag BM25 false positives (high sparse, low dense)
+    # Compare with English translation of same query
+    pass
+```

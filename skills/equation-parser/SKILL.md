@@ -1128,3 +1128,78 @@ EQUATION_OUTPUT_SCHEMA = {
 ```
 
 **Output contract:** All equations include LaTeX, MathML, and plain-text representations. Citations are required for traceability. Request IDs enable cross-skill correlation logging.
+
+
+## 12. Resilience: Checkpoint & Recovery
+
+### Checkpoint System
+Per-page progress tracking with resume capability:
+
+```python
+import json, os
+
+class EquationCheckpoint:
+    def __init__(self, checkpoint_path="./eq_checkpoint.json"):
+        self.path = checkpoint_path
+        self.state = self._load()
+    
+    def _load(self):
+        if os.path.exists(self.path):
+            with open(self.path) as f: return json.load(f)
+        return {"completed_pages": [], "failed_pages": [], "last_chapter": 0}
+    
+    def save(self): 
+        with open(self.path, 'w') as f: json.dump(self.state, f)
+    
+    def should_process(self, chapter, page):
+        return f"{chapter}_{page}" not in self.state["completed_pages"]
+    
+    def mark_done(self, chapter, page):
+        self.state["completed_pages"].append(f"{chapter}_{page}")
+        self.save()
+    
+    def mark_failed(self, chapter, page, error):
+        self.state["failed_pages"].append({"id": f"{chapter}_{page}", "error": str(error)})
+        self.save()
+```
+
+### Cross-Page Equation Stitching
+Detect and merge split equations across page boundaries:
+
+```python
+def stitch_cross_page_equations(page_a_eqs, page_b_eqs):
+    # Detect: last eq on page_a has unmatched { or missing \end
+    # Merge with first eq on page_b if continuation pattern found
+    # Verify merged equation compiles and renders correctly
+    pass
+```
+
+### Nougat Crash Recovery
+Retry with exponential backoff, fallback to LaTeX-OCR:
+
+```python
+import time
+
+def nougat_with_retry(pdf_path, page, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            return run_nougat_on_page(pdf_path, page)
+        except Exception:
+            time.sleep(2 ** attempt)
+    return run_latex_ocr_from_page(pdf_path, page)
+```
+
+### Unicode Sanitization
+Fix garbled Greek symbols and diacritics:
+
+```python
+UNICODE_FIXES = {
+    'Î±': 'α', 'Î²': 'β', 'Î³': 'γ', 'Ï': 'ρ',
+    'Î¸': 'θ', 'Ï†': 'φ', 'Î»': 'λ', 'Ï€': 'π'
+}
+
+def sanitize_unicode(text):
+    for garbled, clean in UNICODE_FIXES.items():
+        text = text.replace(garbled, clean)
+    return text
+```

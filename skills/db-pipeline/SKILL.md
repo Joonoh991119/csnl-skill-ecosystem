@@ -963,3 +963,61 @@ assert len(vec) == 1024, f"Got {len(vec)}-dim, expected 1024"
 # Reduce batch size
 embedder.embed_batch(texts, batch_size=8)
 ```
+
+## Resilience: Checkpoint & Partial Resumption
+
+### Pipeline Checkpoint
+```python
+class PipelineCheckpoint:
+    STEPS = ['marker', 'nougat', 'figures', 'migrate', 'embed', 'eval']
+    
+    def __init__(self, path="./pipeline_checkpoint.json"):
+        self.path = path
+        self.state = self._load()
+    
+    def _load(self):
+        if os.path.exists(self.path):
+            with open(self.path) as f: return json.load(f)
+        return {"chapters": {}, "current_step": None}
+    
+    def chapter_status(self, ch):
+        return self.state["chapters"].get(str(ch), {})
+    
+    def mark_step_done(self, ch, step):
+        self.state["chapters"].setdefault(str(ch), {})[step] = "done"
+        with open(self.path, 'w') as f: json.dump(self.state, f)
+    
+    def needs_processing(self, ch, step):
+        return self.chapter_status(ch).get(step) != "done"
+```
+
+### Mixed-Dimension Detection & Fix
+```python
+def detect_mixed_dimensions(conn):
+    """Find chapters with wrong vector dimensions."""
+    cur = conn.cursor()
+    cur.execute("SELECT chapter, array_length(vector, 1) as dim, COUNT(*) FROM chunks GROUP BY chapter, dim")
+    mixed = {}
+    for ch, dim, count in cur.fetchall():
+        if dim != 1024: mixed[ch] = {"dim": dim, "count": count}
+    return mixed
+
+def fix_mixed_dimensions(conn, embedder, mixed_chapters):
+    """Re-embed only chapters with wrong dimensions."""
+    for ch, info in mixed_chapters.items():
+        texts = fetch_chapter_texts(conn, ch)
+        new_vecs = batch_reembed_mps(texts)
+        update_chapter_vectors(conn, ch, new_vecs)
+```
+
+### Smart Baseline Strategy
+```python
+def should_retake_baseline(conn, last_baseline_date, current_chunk_count):
+    """Decide if baseline needs refresh."""
+    baseline_count = get_baseline_chunk_count(last_baseline_date)
+    drift = abs(current_chunk_count - baseline_count) / max(baseline_count, 1)
+    mixed = detect_mixed_dimensions(conn)
+    if mixed: return True, "mixed dimensions detected"
+    if drift > 0.1: return True, f"chunk count drift {drift:.0%}"
+    return False, "baseline still valid"
+```
