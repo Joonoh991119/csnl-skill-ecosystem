@@ -1,0 +1,573 @@
+{
+  "metadata": {
+    "dataset_name": "CRMB Ground Truth v2 (Chapter-Aligned)",
+    "num_chapters": 17,
+    "num_queries": 34,
+    "institution": "Seoul National University - Cognitive and Systems Neuroscience Lab",
+    "description": "Bootstrap ground truth aligned with actual CRMB chapter titles (Grossberg, Conscious Mind Resonant Brain). v2 replaces generic neuroscience topics with chapter-specific queries.",
+    "version": "2.0",
+    "source_book": "Grossberg - Conscious Mind, Resonant Brain"
+  },
+  "chapters": {
+    "1": {
+      "name": "Overview",
+      "queries": [
+        {
+          "id": "ch01_q1",
+          "query_en": "What is the stability-plasticity dilemma and why is it central to brain function?",
+          "query_ko": "안정성-가소성 딜레마란 무엇이며 왜 뇌 기능에 핵심적인가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch01"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "undergrad",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch01_q2",
+          "query_en": "How does Adaptive Resonance Theory explain the emergence of consciousness from neural dynamics?",
+          "query_ko": "적응적 공명 이론은 신경 역학에서 의식의 출현을 어떻게 설명하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch01"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "phd",
+          "domain": "systems_neuroscience"
+        }
+      ]
+    },
+    "2": {
+      "name": "How a Brain Makes a Mind",
+      "queries": [
+        {
+          "id": "ch02_q1",
+          "query_en": "What is the noise-saturation dilemma and how do shunting networks solve it?",
+          "query_ko": "잡음-포화 딜레마란 무엇이며 shunting 네트워크가 이를 어떻게 해결하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch02"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "master",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch02_q2",
+          "query_en": "Explain the concept of complementary computing in the brain. Give examples of complementary processing streams.",
+          "query_ko": "뇌에서의 상보적 계산 개념을 설명하라. 상보적 처리 스트림의 예를 들어라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch02"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "undergrad",
+          "domain": "computational_neuroscience"
+        }
+      ]
+    },
+    "3": {
+      "name": "How a Brain Sees: Constructing Reality",
+      "queries": [
+        {
+          "id": "ch03_q1",
+          "query_en": "How do boundary completion and surface filling-in work together to construct visual perception?",
+          "query_ko": "경계 완성과 표면 채움이 어떻게 함께 작동하여 시각적 지각을 구성하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch03"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "undergrad",
+          "domain": "sensory_neuroscience"
+        },
+        {
+          "id": "ch03_q2",
+          "query_en": "Why does Grossberg argue that visual illusions reveal the brain's computational principles rather than errors?",
+          "query_ko": "Grossberg가 시각적 착시가 오류가 아닌 뇌의 계산 원리를 드러낸다고 주장하는 이유는?",
+          "relevant_papers": [
+            "grossberg_crmb_ch03"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "sensory_neuroscience"
+        }
+      ]
+    },
+    "4": {
+      "name": "How a Brain Sees: Neural Mechanisms",
+      "queries": [
+        {
+          "id": "ch04_q1",
+          "query_en": "What are the Boundary Contour System (BCS) and Feature Contour System (FCS), and how do they interact?",
+          "query_ko": "경계 윤곽 시스템(BCS)과 특성 윤곽 시스템(FCS)은 무엇이며 어떻게 상호작용하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch04"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "master",
+          "domain": "sensory_neuroscience"
+        },
+        {
+          "id": "ch04_q2",
+          "query_en": "Explain the Craik-O'Brien-Cornsweet effect and how BCS/FCS model accounts for it.",
+          "query_ko": "Craik-O'Brien-Cornsweet 효과를 설명하고 BCS/FCS 모델이 이를 어떻게 설명하는지 기술하라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch04"
+          ],
+          "relevant_sections": [
+            "results",
+            "discussion"
+          ],
+          "difficulty": "phd",
+          "domain": "sensory_neuroscience"
+        }
+      ]
+    },
+    "5": {
+      "name": "Learning to Attend",
+      "queries": [
+        {
+          "id": "ch05_q1",
+          "query_en": "How does the ART matching rule enable hypothesis testing and memory search?",
+          "query_ko": "ART 매칭 규칙은 가설 검증과 기억 탐색을 어떻게 가능하게 하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch05"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "master",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch05_q2",
+          "query_en": "What roles do gamma and beta oscillations play in attentive resonance and mismatch reset within ART?",
+          "query_ko": "ART에서 감마 및 베타 진동이 주의 공명과 불일치 리셋에 어떤 역할을 하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch05"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "results"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        }
+      ]
+    },
+    "6": {
+      "name": "Conscious Seeing",
+      "queries": [
+        {
+          "id": "ch06_q1",
+          "query_en": "What is the ARTSCAN model and how does it achieve view-invariant object recognition?",
+          "query_ko": "ARTSCAN 모델은 무엇이며 시점 불변 객체 인식을 어떻게 달성하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch06"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "master",
+          "domain": "sensory_neuroscience"
+        },
+        {
+          "id": "ch06_q2",
+          "query_en": "How do surface-shroud resonances between V4 and PPC contribute to conscious visual qualia?",
+          "query_ko": "V4와 PPC 사이의 표면-덮개 공명이 의식적 시각 감각질에 어떻게 기여하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch06"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "discussion"
+          ],
+          "difficulty": "phd",
+          "domain": "systems_neuroscience"
+        }
+      ]
+    },
+    "7": {
+      "name": "How Do We See a Changing World",
+      "queries": [
+        {
+          "id": "ch07_q1",
+          "query_en": "How do habituative transmitter gates prevent visual smearing during rapid scene changes?",
+          "query_ko": "습관화 전달물질 게이트가 빠른 장면 변화 시 시각적 번짐을 어떻게 방지하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch07"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "master",
+          "domain": "sensory_neuroscience"
+        },
+        {
+          "id": "ch07_q2",
+          "query_en": "What is a gated dipole opponent process and how does it generate antagonistic rebounds?",
+          "query_ko": "게이트 쌍극 길항 과정이란 무엇이며 길항적 반동을 어떻게 생성하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch07"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "methods"
+          ],
+          "difficulty": "phd",
+          "domain": "sensory_neuroscience"
+        }
+      ]
+    },
+    "8": {
+      "name": "Object Motion",
+      "queries": [
+        {
+          "id": "ch08_q1",
+          "query_en": "How does the brain solve the aperture problem in motion perception?",
+          "query_ko": "뇌는 운동 지각에서 개구부 문제를 어떻게 해결하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch08"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "undergrad",
+          "domain": "sensory_neuroscience"
+        },
+        {
+          "id": "ch08_q2",
+          "query_en": "Explain the role of the Motion BCS model and G-waves in explaining apparent motion and motion capture.",
+          "query_ko": "겉보기 운동과 운동 포착을 설명하는 Motion BCS 모델과 G-파의 역할을 설명하라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch08"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "results"
+          ],
+          "difficulty": "phd",
+          "domain": "sensory_neuroscience"
+        }
+      ]
+    },
+    "9": {
+      "name": "Target Tracking",
+      "queries": [
+        {
+          "id": "ch09_q1",
+          "query_en": "What is the ViSTARS model and how does it integrate target tracking with navigation?",
+          "query_ko": "ViSTARS 모델은 무엇이며 표적 추적과 항법을 어떻게 통합하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch09"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "master",
+          "domain": "systems_neuroscience"
+        },
+        {
+          "id": "ch09_q2",
+          "query_en": "How do attractor-repeller dynamics in the STARS model achieve steering and obstacle avoidance?",
+          "query_ko": "STARS 모델의 끌개-반발자 역학이 조향과 장애물 회피를 어떻게 달성하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch09"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "discussion"
+          ],
+          "difficulty": "phd",
+          "domain": "systems_neuroscience"
+        }
+      ]
+    },
+    "10": {
+      "name": "Laminar Computing",
+      "queries": [
+        {
+          "id": "ch10_q1",
+          "query_en": "What is the LAMINART model and how does it realize the ART matching rule in cortical layers?",
+          "query_ko": "LAMINART 모델은 무엇이며 피질 층에서 ART 매칭 규칙을 어떻게 구현하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch10"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "master",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch10_q2",
+          "query_en": "How does the canonical laminar circuit unify perception, attention, learning, and development?",
+          "query_ko": "정규 층상 회로가 지각, 주의, 학습, 발달을 어떻게 통합하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch10"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "discussion"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        }
+      ]
+    },
+    "11": {
+      "name": "World in Depth",
+      "queries": [
+        {
+          "id": "ch11_q1",
+          "query_en": "How does the 3D LAMINART model solve the figure-ground perception problem?",
+          "query_ko": "3D LAMINART 모델은 전경-배경 지각 문제를 어떻게 해결하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch11"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "master",
+          "domain": "sensory_neuroscience"
+        },
+        {
+          "id": "ch11_q2",
+          "query_en": "Explain DaVinci stereopsis and how the FACADE model accounts for it.",
+          "query_ko": "다빈치 입체시를 설명하고 FACADE 모델이 이를 어떻게 설명하는지 기술하라.",
+          "relevant_papers": [
+            "grossberg_crmb_ch11"
+          ],
+          "relevant_sections": [
+            "results",
+            "discussion"
+          ],
+          "difficulty": "phd",
+          "domain": "sensory_neuroscience"
+        }
+      ]
+    },
+    "12": {
+      "name": "Seeing, Hearing, Speaking",
+      "queries": [
+        {
+          "id": "ch12_q1",
+          "query_en": "How do shared neural mechanisms underlie both visual and auditory processing?",
+          "query_ko": "공유된 신경 메커니즘이 시각 및 청각 처리를 어떻게 기반하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch12"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "undergrad",
+          "domain": "systems_neuroscience"
+        },
+        {
+          "id": "ch12_q2",
+          "query_en": "What neural mechanisms enable speech perception and language processing within the ART framework?",
+          "query_ko": "ART 프레임워크에서 음성 지각과 언어 처리를 가능하게 하는 신경 메커니즘은?",
+          "relevant_papers": [
+            "grossberg_crmb_ch12"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "systems_neuroscience"
+        }
+      ]
+    },
+    "13": {
+      "name": "From Knowing to Feeling",
+      "queries": [
+        {
+          "id": "ch13_q1",
+          "query_en": "What is the CogEM model and how does it explain cognitive-emotional interactions?",
+          "query_ko": "CogEM 모델은 무엇이며 인지-정서 상호작용을 어떻게 설명하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch13"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "master",
+          "domain": "systems_neuroscience"
+        },
+        {
+          "id": "ch13_q2",
+          "query_en": "How can imbalances in arousal and opponent processes contribute to mental disorders according to Grossberg?",
+          "query_ko": "Grossberg에 따르면 각성과 길항 과정의 불균형이 정신 장애에 어떻게 기여할 수 있는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch13"
+          ],
+          "relevant_sections": [
+            "discussion"
+          ],
+          "difficulty": "phd",
+          "domain": "systems_neuroscience"
+        }
+      ]
+    },
+    "14": {
+      "name": "Prefrontal Cortex",
+      "queries": [
+        {
+          "id": "ch14_q1",
+          "query_en": "What is predictive ART (pART) and how does it model prefrontal cortex function?",
+          "query_ko": "예측적 ART(pART)란 무엇이며 전두엽 피질 기능을 어떻게 모델링하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch14"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "master",
+          "domain": "systems_neuroscience"
+        },
+        {
+          "id": "ch14_q2",
+          "query_en": "How do dorsal (cognitive) and ventral (emotional) PFC interact in the pART model?",
+          "query_ko": "pART 모델에서 배측(인지적) 및 복측(정서적) 전두엽이 어떻게 상호작용하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch14"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "results"
+          ],
+          "difficulty": "phd",
+          "domain": "systems_neuroscience"
+        }
+      ]
+    },
+    "15": {
+      "name": "Adaptively Timed",
+      "queries": [
+        {
+          "id": "ch15_q1",
+          "query_en": "What is spectral timing and how does the hippocampal system bridge temporal gaps in learning?",
+          "query_ko": "스펙트럼 타이밍이란 무엇이며 해마 시스템이 학습에서 시간적 간격을 어떻게 연결하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch15"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "master",
+          "domain": "systems_neuroscience"
+        },
+        {
+          "id": "ch15_q2",
+          "query_en": "How does the nSTART model incorporate BDNF to explain memory consolidation and autism?",
+          "query_ko": "nSTART 모델은 BDNF를 통합하여 기억 공고화와 자폐증을 어떻게 설명하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch15"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "discussion"
+          ],
+          "difficulty": "phd",
+          "domain": "systems_neuroscience"
+        }
+      ]
+    },
+    "16": {
+      "name": "Learning Maps",
+      "queries": [
+        {
+          "id": "ch16_q1",
+          "query_en": "How do grid cells and place cells develop through self-organizing maps in the SOVEREIGN model?",
+          "query_ko": "SOVEREIGN 모델에서 격자 세포와 장소 세포가 자기 조직화 지도를 통해 어떻게 발달하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch16"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "key_concepts"
+          ],
+          "difficulty": "master",
+          "domain": "systems_neuroscience"
+        },
+        {
+          "id": "ch16_q2",
+          "query_en": "How does ART stabilize spatial learning and prevent catastrophic forgetting in navigation?",
+          "query_ko": "ART가 항법에서 공간 학습을 안정화하고 치명적 망각을 어떻게 방지하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch16"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "discussion"
+          ],
+          "difficulty": "phd",
+          "domain": "systems_neuroscience"
+        }
+      ]
+    },
+    "17": {
+      "name": "Universal Developmental Code",
+      "queries": [
+        {
+          "id": "ch17_q1",
+          "query_en": "What is the 'universal developmental code' that Grossberg proposes as shared by biological and physical systems?",
+          "query_ko": "Grossberg가 생물학적 및 물리적 시스템이 공유한다고 제안하는 '보편적 발달 코드'란?",
+          "relevant_papers": [
+            "grossberg_crmb_ch17"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "discussion"
+          ],
+          "difficulty": "master",
+          "domain": "computational_neuroscience"
+        },
+        {
+          "id": "ch17_q2",
+          "query_en": "How does the ART Matching Rule serve as a unifying principle across all chapters of CRMB?",
+          "query_ko": "ART 매칭 규칙이 CRMB의 모든 장에 걸쳐 통합 원리로서 어떻게 기능하는가?",
+          "relevant_papers": [
+            "grossberg_crmb_ch17"
+          ],
+          "relevant_sections": [
+            "abstract",
+            "conclusion"
+          ],
+          "difficulty": "phd",
+          "domain": "computational_neuroscience"
+        }
+      ]
+    }
+  }
+}
