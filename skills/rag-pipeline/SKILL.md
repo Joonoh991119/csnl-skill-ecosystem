@@ -490,9 +490,24 @@ def migrate_lancedb_to_pgvector(lance_path: str, pg_conn_string: str):
     print(f"Migrated {len(df)} chunks from LanceDB to pgvector")
 ```
 
-### Embedding Dimension
-CRMB uses BGE-M3 at 1024 dimensions. Set `embedding vector(1024)` in the schema
-(not 1536 like OpenAI). The skill's schema template uses 1024 by default.
+### Embedding Dimension — KNOWN BUG IN CRMB_tutor
+CRMB_tutor has a dimension mismatch (see DIMENSION_MISMATCH_BUG.md):
+- `settings.py`: LOCAL_EMBEDDING_DIM = 1024 (BGE-large-en-v1.5)
+- `lance_store.py`: hardcodes `pa.list_(pa.float32(), 3072)` in schema
+
+Before migrating, verify the actual dimension of existing vectors:
+```python
+import lancedb
+db = lancedb.connect("./db/cmrb_lance")
+table = db.open_table("cmrb_chunks")
+sample = table.head(1).to_pandas()
+actual_dim = len(sample['vector'].iloc[0])
+print(f"Actual embedding dimension: {actual_dim}")
+# Then set EMBEDDING_DIM = actual_dim
+```
+
+The skill's `EMBEDDING_DIM` config variable handles this — set it to match
+whatever CRMB_tutor actually uses before running migration.
 
 ### Existing Chunker Compatibility
 CRMB's `chunker_v2.py` already handles Marker-parsed markdown. The skill's
