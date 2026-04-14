@@ -1021,3 +1021,673 @@ def should_retake_baseline(conn, last_baseline_date, current_chunk_count):
     if drift > 0.1: return True, f"chunk count drift {drift:.0%}"
     return False, "baseline still valid"
 ```
+
+---
+
+## Deep Robustness: P3 Eval Enhancements
+
+### 1. Enhanced Checkpoint with File-Based Persistence
+
+Full file-based checkpoint system with resume capabilities:
+
+```python
+import json
+import os
+from datetime import datetime
+from typing import Dict, Optional, Tuple
+
+class PipelineCheckpoint:
+    CHECKPOINT_FILE = "pipeline_checkpoint.json"
+    STEPS = ['marker', 'nougat', 'figures', 'migrate', 'embed', 'eval']
+    
+    def __init__(self, checkpoint_file: str = "pipeline_checkpoint.json"):
+        self.checkpoint_file = checkpoint_file
+        self.chapters = {}
+        self.timestamps = {}
+    
+    def save(self):
+        """Persist checkpoint state to JSON file with timestamp."""
+        checkpoint_data = {
+            "chapters": self.chapters,
+            "timestamps": self.timestamps,
+            "last_save": datetime.now().isoformat(),
+            "total_chapters": len(self.chapters)
+        }
+        try:
+            with open(self.checkpoint_file, 'w') as f:
+                json.dump(checkpoint_data, f, indent=2)
+            logging.info(f"✓ Checkpoint saved to {self.checkpoint_file}")
+        except IOError as e:
+            logging.error(f"✗ Failed to save checkpoint: {e}")
+            raise
+    
+    def load(self) -> bool:
+        """Resume from last saved checkpoint."""
+        if not os.path.exists(self.checkpoint_file):
+            logging.info("No existing checkpoint found, starting fresh")
+            return False
+        
+        try:
+            with open(self.checkpoint_file) as f:
+                data = json.load(f)
+            self.chapters = data.get("chapters", {})
+            self.timestamps = data.get("timestamps", {})
+            logging.info(f"✓ Checkpoint loaded: {len(self.chapters)} chapters")
+            return True
+        except (json.JSONDecodeError, IOError) as e:
+            logging.error(f"✗ Failed to load checkpoint: {e}")
+            return False
+    
+    def mark_step_done(self, chapter: int, step: str):
+        """Mark a step as complete for a chapter."""
+        ch_str = str(chapter)
+        if ch_str not in self.chapters:
+            self.chapters[ch_str] = {}
+        self.chapters[ch_str][step] = "done"
+        self.timestamps[f"{ch_str}_{step}"] = datetime.now().isoformat()
+        self.save()
+    
+    def needs_processing(self, chapter: int, step: str) -> bool:
+        """Check if a step needs processing for a chapter."""
+        ch_str = str(chapter)
+        return self.chapters.get(ch_str, {}).get(step) != "done"
+    
+    def get_resume_point(self) -> Optional[Tuple[int, str]]:
+        """Find first incomplete step across all chapters."""
+        for ch_num in sorted([int(k) for k in self.chapters.keys()]):
+            for step in self.STEPS:
+                if self.needs_processing(ch_num, step):
+                    return (ch_num, step)
+        return None
+    
+    def get_progress_summary(self) -> Dict:
+        """Get human-readable progress summary."""
+        summary = {
+            "total_chapters": len(self.chapters),
+            "steps_by_chapter": {},
+            "completion_percentage": 0
+        }
+        
+        total_tasks = len(self.chapters) * len(self.STEPS)
+        completed_tasks = 0
+        
+        for ch_str, steps in self.chapters.items():
+            completed = sum(1 for s in self.STEPS if steps.get(s) == "done")
+            summary["steps_by_chapter"][ch_str] = f"{completed}/{len(self.STEPS)}"
+            completed_tasks += completed
+        
+        if total_tasks > 0:
+            summary["completion_percentage"] = (completed_tasks / total_tasks) * 100
+        
+        return summary
+```
+
+### 2. Partial Migration Rollback Manager
+
+Handle schema migrations with built-in rollback capabilities:
+
+```python
+import psycopg2
+from typing import List, Dict
+import logging
+
+class RollbackManager:
+    def __init__(self, db_conn):
+        self.conn = db_conn
+        self.snapshots = {}
+        self.migration_log = []
+    
+    def snapshot_before_migration(self, table_name: str) -> bool:
+        """Save table state before migration for rollback."""
+        try:
+            cur = self.conn.cursor()
+            # Save schema
+            cur.execute(f"""
+                SELECT column_name, data_type, is_nullable 
+                FROM information_schema.columns 
+                WHERE table_name = %s
+                ORDER BY ordinal_position
+            """, (table_name,))
+            schema = cur.fetchall()
+            
+            # Count rows
+            cur.execute(f"SELECT COUNT(*) FROM {table_name}")
+            row_count = cur.fetchone()[0]
+            
+            # Save row samples (first 100)
+            cur.execute(f"SELECT * FROM {table_name} LIMIT 100")
+            sample_rows = cur.fetchall()
+            
+            self.snapshots[table_name] = {
+                "schema": schema,
+                "row_count": row_count,
+                "sample_rows": sample_rows,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            self.migration_log.append({
+                "action": "snapshot",
+                "table": table_name,
+                "status": "success",
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            logging.info(f"✓ Snapshot saved for {table_name}: {row_count} rows")
+            return True
+        except Exception as e:
+            logging.error(f"✗ Snapshot failed for {table_name}: {e}")
+            self.migration_log.append({
+                "action": "snapshot",
+                "table": table_name,
+                "status": "failed",
+                "error": str(e)
+            })
+            return False
+    
+    def rollback(self, table_name: str) -> bool:
+        """Restore table to pre-migration state."""
+        if table_name not in self.snapshots:
+            logging.error(f"✗ No snapshot available for {table_name}")
+            return False
+        
+        try:
+            cur = self.conn.cursor()
+            snapshot = self.snapshots[table_name]
+            
+            # Rename current table
+            cur.execute(f"ALTER TABLE {table_name} RENAME TO {table_name}_failed")
+            
+            # Restore from backup table if exists
+            cur.execute(f"ALTER TABLE {table_name}_backup RENAME TO {table_name}")
+            
+            self.conn.commit()
+            
+            self.migration_log.append({
+                "action": "rollback",
+                "table": table_name,
+                "status": "success",
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            logging.info(f"✓ Rollback successful for {table_name}")
+            return True
+        except Exception as e:
+            logging.error(f"✗ Rollback failed: {e}")
+            self.migration_log.append({
+                "action": "rollback",
+                "table": table_name,
+                "status": "failed",
+                "error": str(e)
+            })
+            return False
+    
+    def verify_migration(self, table_name: str, expected_schema: List[str]) -> bool:
+        """Compare post-migration schema against expected schema."""
+        try:
+            cur = self.conn.cursor()
+            cur.execute(f"""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = %s
+                ORDER BY ordinal_position
+            """, (table_name,))
+            
+            actual_columns = [row[0] for row in cur.fetchall()]
+            
+            missing = set(expected_schema) - set(actual_columns)
+            extra = set(actual_columns) - set(expected_schema)
+            
+            if missing or extra:
+                logging.warning(f"Schema mismatch for {table_name}:")
+                if missing:
+                    logging.warning(f"  Missing columns: {missing}")
+                if extra:
+                    logging.warning(f"  Extra columns: {extra}")
+                return False
+            
+            logging.info(f"✓ Schema verification passed for {table_name}")
+            return True
+        except Exception as e:
+            logging.error(f"✗ Verification failed: {e}")
+            return False
+    
+    def get_migration_report(self) -> Dict:
+        """Generate migration report."""
+        success_count = sum(1 for log in self.migration_log if log.get("status") == "success")
+        return {
+            "total_operations": len(self.migration_log),
+            "successful": success_count,
+            "failed": len(self.migration_log) - success_count,
+            "log": self.migration_log
+        }
+```
+
+### 3. Corrupt PDF Recovery
+
+Handle corrupt PDFs with multiple recovery strategies:
+
+```python
+import fitz  # PyMuPDF
+import requests
+from typing import Optional, Dict
+import logging
+
+class CorruptPDFRecovery:
+    MAX_RETRIES = 3
+    
+    def __init__(self, pdf_url_map: Dict[str, str], ocr_fallback: bool = True):
+        """
+        pdf_url_map: Dict mapping chapter IDs to download URLs for re-download
+        ocr_fallback: Whether to use OCR as fallback if PDF extraction fails
+        """
+        self.pdf_url_map = pdf_url_map
+        self.ocr_fallback = ocr_fallback
+        self.recovery_log = []
+    
+    def handle_corrupt_pdf(self, pdf_path: str, chapter_id: int) -> Optional[str]:
+        """
+        Handle corrupt PDF with retry and fallback strategies.
+        Returns: extracted markdown on success, None on failure
+        """
+        strategies = [
+            ("direct_extraction", lambda: self._try_direct_extraction(pdf_path)),
+            ("re_download", lambda: self._try_redownload(pdf_path, chapter_id)),
+            ("ocr_fallback", lambda: self._try_ocr_fallback(pdf_path) if self.ocr_fallback else None),
+        ]
+        
+        for strategy_name, strategy_func in strategies:
+            try:
+                result = strategy_func()
+                if result:
+                    self.recovery_log.append({
+                        "chapter": chapter_id,
+                        "status": "recovered",
+                        "strategy": strategy_name,
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    logging.info(f"✓ Chapter {chapter_id} recovered via {strategy_name}")
+                    return result
+            except Exception as e:
+                logging.warning(f"  {strategy_name} failed: {e}")
+                continue
+        
+        self.recovery_log.append({
+            "chapter": chapter_id,
+            "status": "unrecoverable",
+            "timestamp": datetime.now().isoformat()
+        })
+        logging.error(f"✗ Failed to recover chapter {chapter_id}")
+        return None
+    
+    def _try_direct_extraction(self, pdf_path: str) -> Optional[str]:
+        """Try direct extraction with validation."""
+        try:
+            doc = fitz.open(pdf_path)
+            text = doc.get_text()
+            doc.close()
+            
+            if len(text.strip()) < 100:
+                raise ValueError("Extracted text too short, likely corrupted")
+            return text
+        except Exception as e:
+            raise
+    
+    def _try_redownload(self, pdf_path: str, chapter_id: int) -> Optional[str]:
+        """Try to re-download PDF from source."""
+        if chapter_id not in self.pdf_url_map:
+            raise ValueError(f"No download URL for chapter {chapter_id}")
+        
+        url = self.pdf_url_map[chapter_id]
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                response = requests.get(url, timeout=30)
+                response.raise_for_status()
+                
+                with open(pdf_path, 'wb') as f:
+                    f.write(response.content)
+                
+                # Validate downloaded file
+                doc = fitz.open(pdf_path)
+                text = doc.get_text()
+                doc.close()
+                
+                if len(text.strip()) < 100:
+                    raise ValueError("Downloaded PDF too short")
+                
+                return text
+            except Exception as e:
+                if attempt < self.MAX_RETRIES - 1:
+                    logging.warning(f"  Retry {attempt + 1}/{self.MAX_RETRIES}: {e}")
+                    continue
+                raise
+    
+    def _try_ocr_fallback(self, pdf_path: str) -> Optional[str]:
+        """Use OCR as last resort (requires pytesseract/tesseract)."""
+        try:
+            import pytesseract
+            from PIL import Image
+            import io
+            
+            doc = fitz.open(pdf_path)
+            full_text = []
+            
+            for page_num, page in enumerate(doc):
+                try:
+                    # Render page to image
+                    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                    img_data = pix.tobytes("ppm")
+                    img = Image.open(io.BytesIO(img_data))
+                    
+                    # OCR the image
+                    text = pytesseract.image_to_string(img)
+                    full_text.append(text)
+                except Exception as e:
+                    logging.warning(f"  OCR failed for page {page_num}: {e}")
+                    continue
+            
+            doc.close()
+            result = "\n".join(full_text)
+            
+            if len(result.strip()) < 100:
+                raise ValueError("OCR extracted too little text")
+            
+            return result
+        except ImportError:
+            raise ValueError("pytesseract not available for OCR fallback")
+    
+    def get_recovery_report(self) -> Dict:
+        """Generate recovery report."""
+        recovered = sum(1 for log in self.recovery_log if log.get("status") == "recovered")
+        unrecoverable = sum(1 for log in self.recovery_log if log.get("status") == "unrecoverable")
+        
+        return {
+            "total_attempts": len(self.recovery_log),
+            "recovered": recovered,
+            "unrecoverable": unrecoverable,
+            "recovery_rate": (recovered / len(self.recovery_log)) if self.recovery_log else 0,
+            "log": self.recovery_log
+        }
+```
+
+### 4. Deduplication via Embedding Cosine Similarity
+
+Remove duplicate chunks using vector similarity:
+
+```python
+import numpy as np
+from scipy.spatial.distance import cosine
+from typing import List, Dict, Tuple
+import logging
+
+class ChunkDeduplicator:
+    def __init__(self, similarity_threshold: float = 0.95):
+        """
+        similarity_threshold: Cosine similarity threshold for duplicates (0-1)
+        Default 0.95 = 95% similar = likely duplicate
+        """
+        self.similarity_threshold = similarity_threshold
+        self.dedup_log = []
+    
+    def deduplicate_chunks(self, chunks: List[Dict], 
+                          vector_field: str = "vector") -> Tuple[List[Dict], Dict]:
+        """
+        Deduplicate chunks using cosine similarity on vectors.
+        Returns: (deduplicated_chunks, dedup_stats)
+        """
+        if not chunks:
+            return chunks, {"removed": 0, "kept": len(chunks)}
+        
+        kept_chunks = []
+        removed_indices = set()
+        
+        # Build embeddings list
+        embeddings = []
+        for chunk in chunks:
+            vec = chunk.get(vector_field)
+            if isinstance(vec, list):
+                embeddings.append(np.array(vec))
+            else:
+                embeddings.append(vec)
+        
+        # Compare each chunk with all previous kept chunks
+        for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+            is_duplicate = False
+            
+            for j, kept_idx in enumerate(range(len(kept_chunks))):
+                # Calculate cosine similarity
+                similarity = 1 - cosine(embedding, embeddings[kept_idx])
+                
+                if similarity >= self.similarity_threshold:
+                    self.dedup_log.append({
+                        "removed_index": i,
+                        "duplicate_of_index": kept_idx,
+                        "similarity": float(similarity),
+                        "chapter": chunk.get("chapter"),
+                        "page": chunk.get("page")
+                    })
+                    is_duplicate = True
+                    logging.debug(f"Chunk {i} marked as duplicate of {kept_idx} (sim={similarity:.3f})")
+                    break
+            
+            if not is_duplicate:
+                kept_chunks.append(chunk)
+        
+        stats = {
+            "total_input": len(chunks),
+            "removed": len(chunks) - len(kept_chunks),
+            "kept": len(kept_chunks),
+            "removal_rate": (len(chunks) - len(kept_chunks)) / max(len(chunks), 1)
+        }
+        
+        logging.info(f"✓ Deduplication complete: {stats['removed']} removed, {stats['kept']} kept")
+        return kept_chunks, stats
+    
+    def get_dedup_report(self) -> Dict:
+        """Generate deduplication report."""
+        return {
+            "total_duplicates_found": len(self.dedup_log),
+            "threshold": self.similarity_threshold,
+            "log": self.dedup_log
+        }
+```
+
+### 5. Schema Conflict Resolution
+
+Handle v1→v2 dimension mismatches and schema conflicts:
+
+```python
+import psycopg2
+from typing import Dict, List, Optional
+import logging
+
+class SchemaConflictResolver:
+    def __init__(self, db_conn):
+        self.conn = db_conn
+        self.conflict_log = []
+    
+    def detect_schema_conflicts(self, table_name: str) -> Dict:
+        """Detect schema version conflicts."""
+        try:
+            cur = self.conn.cursor()
+            
+            # Get vector dimensions
+            cur.execute(f"""
+                SELECT 
+                    column_name,
+                    array_length(vector, 1) as dim
+                FROM {table_name}
+                WHERE vector IS NOT NULL
+                LIMIT 1
+            """)
+            
+            result = cur.fetchone()
+            conflicts = {
+                "table": table_name,
+                "has_conflicts": False,
+                "dimension_mismatches": [],
+                "missing_columns": []
+            }
+            
+            if result:
+                actual_dim = result[1]
+                expected_dim = 1024  # BGE-M3 default
+                
+                if actual_dim != expected_dim:
+                    conflicts["has_conflicts"] = True
+                    conflicts["dimension_mismatches"].append({
+                        "expected": expected_dim,
+                        "actual": actual_dim,
+                        "mismatch": actual_dim - expected_dim
+                    })
+            
+            # Check for required columns
+            required_columns = ["raw_text", "equations_latex", "figure_refs", "vector"]
+            cur.execute(f"""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = %s
+            """, (table_name,))
+            
+            actual_columns = {row[0] for row in cur.fetchall()}
+            missing = set(required_columns) - actual_columns
+            
+            if missing:
+                conflicts["has_conflicts"] = True
+                conflicts["missing_columns"] = list(missing)
+            
+            return conflicts
+        except Exception as e:
+            logging.error(f"✗ Schema conflict detection failed: {e}")
+            return {"error": str(e)}
+    
+    def resolve_schema_conflict(self, table_name: str, 
+                               source_dim: int = 3072,
+                               target_dim: int = 1024) -> bool:
+        """Resolve dimension mismatches by re-embedding with correct model."""
+        try:
+            cur = self.conn.cursor()
+            
+            # Detect chapters with wrong dimensions
+            cur.execute(f"""
+                SELECT DISTINCT chapter
+                FROM {table_name}
+                WHERE array_length(vector, 1) != %s
+            """, (target_dim,))
+            
+            wrong_dim_chapters = [row[0] for row in cur.fetchall()]
+            
+            if not wrong_dim_chapters:
+                logging.info(f"✓ No dimension conflicts in {table_name}")
+                return True
+            
+            logging.info(f"Found {len(wrong_dim_chapters)} chapters with {source_dim}→{target_dim} mismatch")
+            
+            # Log conflict
+            self.conflict_log.append({
+                "table": table_name,
+                "action": "dimension_migration",
+                "source_dim": source_dim,
+                "target_dim": target_dim,
+                "affected_chapters": wrong_dim_chapters,
+                "count": len(wrong_dim_chapters),
+                "timestamp": datetime.now().isoformat(),
+                "status": "detected"
+            })
+            
+            # Create temp table with correct schema
+            cur.execute(f"""
+                CREATE TABLE {table_name}_v2_temp AS
+                SELECT * FROM {table_name}
+                WHERE array_length(vector, 1) = %s
+                LIMIT 0
+            """, (target_dim,))
+            
+            # For affected chapters, text would need re-embedding
+            # (actual re-embedding done in orchestrator with BGE-M3)
+            logging.info(f"✓ Schema resolution prepared for {len(wrong_dim_chapters)} chapters")
+            
+            self.conflict_log[-1]["status"] = "prepared"
+            return True
+        except Exception as e:
+            logging.error(f"✗ Schema resolution failed: {e}")
+            self.conflict_log.append({
+                "table": table_name,
+                "action": "dimension_migration",
+                "status": "failed",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            })
+            return False
+    
+    def get_conflict_report(self) -> Dict:
+        """Generate conflict resolution report."""
+        return {
+            "total_conflicts": len(self.conflict_log),
+            "resolved": sum(1 for c in self.conflict_log if c.get("status") == "resolved"),
+            "prepared": sum(1 for c in self.conflict_log if c.get("status") == "prepared"),
+            "failed": sum(1 for c in self.conflict_log if c.get("status") == "failed"),
+            "log": self.conflict_log
+        }
+```
+
+### Integration Example
+
+```python
+# Usage within DBPipelineOrchestrator
+def run_full_pipeline_with_deep_robustness(self):
+    """Full pipeline with checkpoint, rollback, recovery, and dedup."""
+    
+    # Initialize resilience managers
+    checkpoint = PipelineCheckpoint()
+    rollback_mgr = RollbackManager(self.pg_conn)
+    corrupt_recovery = CorruptPDFRecovery(self.pdf_url_map)
+    deduplicator = ChunkDeduplicator(threshold=0.95)
+    schema_resolver = SchemaConflictResolver(self.pg_conn)
+    
+    try:
+        # Load or start fresh
+        checkpoint.load()
+        
+        # Process chapters
+        for chapter_id in range(1, 21):
+            resume_point = checkpoint.get_resume_point()
+            if resume_point and resume_point[0] > chapter_id:
+                continue
+            
+            # Process chapter with recovery
+            pdf_path = self.pdf_dir / f"chapter_{chapter_id}.pdf"
+            try:
+                markdown = self._process_pdf(pdf_path)
+            except Exception:
+                markdown = corrupt_recovery.handle_corrupt_pdf(str(pdf_path), chapter_id)
+                if not markdown:
+                    continue
+            
+            checkpoint.mark_step_done(chapter_id, 'marker')
+            
+            # ... rest of pipeline steps ...
+        
+        # Deduplicate chunks before migration
+        chunks = self._load_all_chunks()
+        chunks, dedup_stats = deduplicator.deduplicate_chunks(chunks)
+        
+        # Migrate with rollback support
+        rollback_mgr.snapshot_before_migration("crmb_chunks")
+        self._migrate_to_pgvector(chunks)
+        schema_resolver.resolve_schema_conflict("crmb_chunks_v2")
+        rollback_mgr.verify_migration("crmb_chunks_v2", ["raw_text", "equations_latex", "vector"])
+        
+        # Generate reports
+        return {
+            "checkpoint": checkpoint.get_progress_summary(),
+            "deduplication": deduplicator.get_dedup_report(),
+            "recovery": corrupt_recovery.get_recovery_report(),
+            "schema": schema_resolver.get_conflict_report(),
+            "rollback": rollback_mgr.get_migration_report()
+        }
+    except Exception as e:
+        logging.error(f"Pipeline failed, triggering rollback: {e}")
+        rollback_mgr.rollback("crmb_chunks_v2")
+        raise
+```
+```

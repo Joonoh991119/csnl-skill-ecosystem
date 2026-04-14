@@ -542,3 +542,599 @@ class EvolutionBridgeV2:
         raw = (feedback_volume / 100.0) * 0.6 + severity * 0.4
         return min(1.0, max(0.0, raw))
 ```
+
+## Deep Robustness
+
+Comprehensive anti-abuse and quality assurance mechanisms for handling adversarial input, sarcasm, feedback oscillations, and multi-language sentiment analysis.
+
+### 1. Spam Detection
+
+```python
+from collections import defaultdict
+from typing import Tuple
+import time
+
+class SpamDetector:
+    """Identify spam, duplicate, and low-quality feedback using heuristic and content-based filters."""
+    
+    THRESHOLDS = {
+        "repetition_ratio": 0.6,      # >60% repeated words = spam
+        "link_density": 0.3,           # >30% URLs = spam
+        "all_caps_ratio": 0.5,         # >50% caps = spam
+        "min_words": 3,                # Feedback must have >= 3 words
+        "duplicate_cosine": 0.9,       # Similarity >0.9 = duplicate
+        "rate_limit_per_hour": 5       # Max 5 feedback items per user per hour
+    }
+    
+    def __init__(self):
+        self.user_feedback_history = defaultdict(list)  # user_id -> [(timestamp, text), ...]
+        self.vector_cache = {}  # text -> embedding
+    
+    def classify(self, feedback_item: FeedbackEntry) -> Tuple[bool, str]:
+        """Classify feedback as spam or legitimate.
+        
+        Args:
+            feedback_item: FeedbackEntry to classify
+        
+        Returns:
+            (is_spam: bool, reason: str)
+        """
+        user_id = feedback_item.user_id
+        content = feedback_item.content
+        timestamp = float(feedback_item.timestamp)
+        
+        # Check rate limiting
+        if self._is_rate_limited(user_id, timestamp):
+            return (True, "rate_limit_exceeded")
+        
+        # Check content length
+        word_count = len(content.split())
+        if word_count < self.THRESHOLDS["min_words"]:
+            return (True, "too_short")
+        
+        # Check repetition ratio (token frequency concentration)
+        if self._get_repetition_ratio(content) > self.THRESHOLDS["repetition_ratio"]:
+            return (True, "excessive_repetition")
+        
+        # Check link density
+        if self._get_link_density(content) > self.THRESHOLDS["link_density"]:
+            return (True, "spam_links")
+        
+        # Check all-caps ratio
+        if self._get_all_caps_ratio(content) > self.THRESHOLDS["all_caps_ratio"]:
+            return (True, "shouting")
+        
+        # Check for duplicate against user's history
+        if self._is_duplicate(user_id, content):
+            return (True, "duplicate_submission")
+        
+        # Record this feedback in history
+        self.user_feedback_history[user_id].append((timestamp, content))
+        
+        return (False, "legitimate")
+    
+    def _is_rate_limited(self, user_id: str, current_timestamp: float) -> bool:
+        """Check if user exceeded rate limit (max 5 items per hour)."""
+        one_hour_ago = current_timestamp - 3600
+        recent_feedback = [
+            ts for ts, _ in self.user_feedback_history[user_id]
+            if ts > one_hour_ago
+        ]
+        return len(recent_feedback) >= self.THRESHOLDS["rate_limit_per_hour"]
+    
+    def _get_repetition_ratio(self, text: str) -> float:
+        """Calculate ratio of repeated words to total words."""
+        words = text.lower().split()
+        if not words:
+            return 0.0
+        word_counts = defaultdict(int)
+        for word in words:
+            word_counts[word] += 1
+        repeated_words = sum(count - 1 for count in word_counts.values() if count > 1)
+        return repeated_words / len(words)
+    
+    def _get_link_density(self, text: str) -> float:
+        """Calculate ratio of URL tokens to total tokens."""
+        import re
+        url_pattern = r'https?://\S+|www\.\S+'
+        urls = re.findall(url_pattern, text)
+        tokens = text.split()
+        if not tokens:
+            return 0.0
+        return len(urls) / len(tokens)
+    
+    def _get_all_caps_ratio(self, text: str) -> float:
+        """Calculate ratio of all-caps words to total words."""
+        words = text.split()
+        if not words:
+            return 0.0
+        caps_words = [w for w in words if w.isupper() and len(w) > 1]
+        return len(caps_words) / len(words)
+    
+    def _is_duplicate(self, user_id: str, content: str) -> bool:
+        """Check if content is similar to user's previous feedback (cosine >0.9)."""
+        if user_id not in self.user_feedback_history:
+            return False
+        
+        current_vec = self._vectorize(content)
+        for _, prev_content in self.user_feedback_history[user_id]:
+            prev_vec = self._vectorize(prev_content)
+            similarity = self._cosine_similarity(current_vec, prev_vec)
+            if similarity > self.THRESHOLDS["duplicate_cosine"]:
+                return True
+        return False
+    
+    def _vectorize(self, text: str) -> dict:
+        """Simple bag-of-words vectorization."""
+        if text in self.vector_cache:
+            return self.vector_cache[text]
+        words = text.lower().split()
+        vec = defaultdict(int)
+        for word in words:
+            vec[word] += 1
+        self.vector_cache[text] = vec
+        return vec
+    
+    def _cosine_similarity(self, vec1: dict, vec2: dict) -> float:
+        """Compute cosine similarity between two bag-of-words vectors."""
+        if not vec1 or not vec2:
+            return 0.0
+        dot_product = sum(vec1.get(k, 0) * vec2.get(k, 0) for k in set(vec1.keys()) | set(vec2.keys()))
+        norm1 = sum(v ** 2 for v in vec1.values()) ** 0.5
+        norm2 = sum(v ** 2 for v in vec2.values()) ** 0.5
+        if norm1 == 0 or norm2 == 0:
+            return 0.0
+        return dot_product / (norm1 * norm2)
+```
+
+### 2. Korean Sarcasm Detection
+
+```python
+class SarcasmDetectorKorean:
+    """Detect Korean sarcasm via pattern matching and emoji-sentiment mismatch."""
+    
+    SARCASM_MARKERS = {
+        "진짜 대단하시네요": "sarcasm_marker",      # "You're really great" (sarcastic)
+        "아 네네": "dismissive_sarcasm",            # "Yeah yeah" (sarcastic)
+        "ㅎㅎ": "laughing_dismissal",               # "haha" (dismissive)
+        "정말요": "insincere_agreement",            # "Really?" (sarcastic)
+        "좋네요": "false_praise"                    # "That's nice" (might be sarcastic)
+    }
+    
+    POSITIVE_EMOJIS = {"😊", "😄", "👍", "❤️", "😍", "🎉"}
+    NEGATIVE_WORDS = {
+        "나쁘", "싫어", "불만", "문제", "실패", "잘못", 
+        "어렵", "어색", "부족", "이상한", "끔찍"
+    }
+    
+    def __init__(self, confidence_threshold: float = 0.7):
+        self.confidence_threshold = confidence_threshold
+    
+    def detect_sarcasm_ko(self, text: str) -> dict:
+        """Detect Korean sarcasm patterns and emoji mismatches.
+        
+        Args:
+            text: Korean feedback text
+        
+        Returns:
+            {
+                'is_sarcasm': bool,
+                'confidence': float [0.0, 1.0],
+                'reason': str,
+                'suggested_sentiment': str (original, inverted)
+            }
+        """
+        sarcasm_score = 0.0
+        reasons = []
+        
+        # Check for sarcasm markers
+        marker_found = False
+        for marker, marker_type in self.SARCASM_MARKERS.items():
+            if marker in text:
+                marker_found = True
+                sarcasm_score += 0.3
+                reasons.append(f"sarcasm_marker:{marker_type}")
+                break
+        
+        # Check for emoji-sentiment mismatch
+        emoji_negative_mismatch = self._check_emoji_sentiment_mismatch(text)
+        if emoji_negative_mismatch:
+            sarcasm_score += 0.4
+            reasons.append("emoji_sentiment_mismatch")
+        
+        # Check for negative words that contradict positive markers
+        has_negative_words = any(word in text for word in self.NEGATIVE_WORDS)
+        if marker_found and has_negative_words:
+            sarcasm_score += 0.3
+            reasons.append("marker_with_negative_context")
+        
+        # Final classification
+        is_sarcasm = sarcasm_score >= self.confidence_threshold
+        
+        return {
+            "is_sarcasm": is_sarcasm,
+            "confidence": min(1.0, sarcasm_score),
+            "reason": " | ".join(reasons) if reasons else "no_sarcasm_detected",
+            "suggested_sentiment": "inverted" if is_sarcasm else "original"
+        }
+    
+    def _check_emoji_sentiment_mismatch(self, text: str) -> bool:
+        """Check if positive emoji appears with negative words."""
+        has_positive_emoji = any(emoji in text for emoji in self.POSITIVE_EMOJIS)
+        has_negative_words = any(word in text for word in self.NEGATIVE_WORDS)
+        return has_positive_emoji and has_negative_words
+```
+
+### 3. Feedback Loop Cycle Prevention
+
+```python
+from collections import defaultdict, deque
+
+class FeedbackCycleDetector:
+    """Detect and dampen oscillation in parameter adjustments from feedback loops."""
+    
+    def __init__(self, history_window: int = 10):
+        """Initialize cycle detector with parameter history tracking.
+        
+        Args:
+            history_window: Number of iterations to track for oscillation detection
+        """
+        self.parameter_history = defaultdict(lambda: deque(maxlen=history_window))
+        self.history_window = history_window
+        self.dampening_factor = 0.5  # Reduce adjustment magnitude by 50% per oscillation
+    
+    def record_adjustment(self, param_name: str, old_val, new_val):
+        """Record parameter adjustment in history.
+        
+        Args:
+            param_name: Parameter identifier (e.g., 'top_k', 'hint_frequency')
+            old_val: Previous parameter value
+            new_val: New parameter value
+        """
+        adjustment = {
+            "old": old_val,
+            "new": new_val,
+            "timestamp": time.time()
+        }
+        self.parameter_history[param_name].append(adjustment)
+    
+    def detect_oscillation(self, param_name: str, window_size: int = 3) -> bool:
+        """Detect if parameter toggled back and forth within recent iterations.
+        
+        Args:
+            param_name: Parameter to check
+            window_size: Number of recent iterations to examine (default: 3)
+        
+        Returns:
+            True if oscillation detected, False otherwise
+        """
+        history = self.parameter_history[param_name]
+        if len(history) < window_size:
+            return False
+        
+        # Get last 3 values in window
+        recent_values = [h["new"] for h in list(history)[-window_size:]]
+        
+        # Check for pattern: A -> B -> A (toggle back)
+        if len(recent_values) >= 3:
+            return (recent_values[0] == recent_values[2] and 
+                    recent_values[0] != recent_values[1])
+        
+        return False
+    
+    def get_dampened_adjustment(self, param_name: str, proposed_delta: float) -> float:
+        """Apply dampening to adjustment magnitude if oscillation detected.
+        
+        Args:
+            param_name: Parameter being adjusted
+            proposed_delta: Proposed change magnitude
+        
+        Returns:
+            Adjusted delta (reduced if oscillation detected)
+        """
+        oscillation_count = self._count_recent_oscillations(param_name)
+        
+        # Each oscillation reduces magnitude by 50%
+        dampening = self.dampening_factor ** oscillation_count
+        dampened_delta = proposed_delta * dampening
+        
+        return {
+            "original_delta": proposed_delta,
+            "dampened_delta": dampened_delta,
+            "oscillation_count": oscillation_count,
+            "dampening_applied": dampening
+        }
+    
+    def _count_recent_oscillations(self, param_name: str) -> int:
+        """Count number of detected oscillations in recent history."""
+        history = self.parameter_history[param_name]
+        if len(history) < 3:
+            return 0
+        
+        oscillations = 0
+        recent = list(history)[-9:]  # Look at last 9 entries
+        
+        for i in range(len(recent) - 2):
+            if (recent[i]["new"] == recent[i + 2]["new"] and 
+                recent[i]["new"] != recent[i + 1]["new"]):
+                oscillations += 1
+        
+        return oscillations
+```
+
+### 4. Adversarial Input Sanitization
+
+```python
+import re
+import unicodedata
+
+def sanitize_feedback(feedback_text: str, max_length: int = 2000) -> dict:
+    """Sanitize feedback against HTML injection, prompt injection, and malformed input.
+    
+    Args:
+        feedback_text: Raw feedback string
+        max_length: Maximum allowed character length (default: 2000)
+    
+    Returns:
+        {
+            'cleaned': str,
+            'is_safe': bool,
+            'issues': [str],
+            'original_length': int,
+            'final_length': int
+        }
+    """
+    issues = []
+    
+    # 1. Check length
+    if len(feedback_text) > max_length:
+        feedback_text = feedback_text[:max_length]
+        issues.append(f"truncated_to_{max_length}_chars")
+    
+    # 2. Detect and remove HTML/script injection
+    html_script_pattern = r'<script|<iframe|<img|on\w+\s*=|javascript:'
+    if re.search(html_script_pattern, feedback_text, re.IGNORECASE):
+        feedback_text = re.sub(html_script_pattern, '', feedback_text, flags=re.IGNORECASE)
+        issues.append("html_script_injection_removed")
+    
+    # 3. Detect prompt injection attempts
+    injection_indicators = [
+        "ignore previous instructions",
+        "системная роль",  # Russian "system role"
+        "역할 무시",        # Korean "ignore role"
+        "system prompt",
+        "jailbreak",
+        "override"
+    ]
+    
+    if any(indicator.lower() in feedback_text.lower() for indicator in injection_indicators):
+        issues.append("prompt_injection_detected")
+    
+    # 4. Unicode normalization (Korean text)
+    feedback_text = unicodedata.normalize('NFC', feedback_text)
+    
+    # 5. Remove control characters
+    feedback_text = ''.join(char for char in feedback_text if unicodedata.category(char)[0] != 'C')
+    
+    is_safe = "prompt_injection_detected" not in issues
+    
+    return {
+        "cleaned": feedback_text.strip(),
+        "is_safe": is_safe,
+        "issues": issues,
+        "original_length": len(feedback_text),
+        "final_length": len(feedback_text.strip())
+    }
+```
+
+### 5. Multi-Language Sentiment Fallback
+
+```python
+class MultiLangSentiment:
+    """Robust multi-language sentiment analysis with Korean-first, English fallback strategy."""
+    
+    def __init__(self):
+        self.korean_classifier = SentimentClassifier()  # Existing Korean classifier
+        self.english_patterns = {
+            "positive": ["good", "great", "helpful", "clear", "excellent", "amazing"],
+            "negative": ["bad", "terrible", "unclear", "confusing", "poor", "awful"],
+            "neutral": []
+        }
+    
+    def classify_with_fallback(self, text: str, primary_lang: str = "ko") -> dict:
+        """Classify sentiment with primary language support and automatic fallback.
+        
+        Args:
+            text: Feedback text (may be mixed language)
+            primary_lang: Primary language ('ko' or 'en')
+        
+        Returns:
+            {
+                'sentiment': str (positive/negative/neutral),
+                'confidence': float,
+                'language_detected': str,
+                'primary_result': dict,
+                'fallback_result': dict (if used),
+                'merged_result': dict (if mixed language)
+            }
+        """
+        # Detect language composition
+        lang_ratio = self._detect_language_mix(text)
+        
+        results = {
+            "original_text": text,
+            "language_detected": lang_ratio,
+            "confidence": 0.0,
+            "sentiment": "neutral"
+        }
+        
+        # If pure or primarily Korean
+        if lang_ratio["korean_ratio"] >= 0.7:
+            results["primary_result"] = self.korean_classifier.classify(text, language="ko")
+            results["sentiment"] = results["primary_result"]["sentiment"]
+            results["confidence"] = results["primary_result"]["confidence"]
+        
+        # If pure or primarily English
+        elif lang_ratio["english_ratio"] >= 0.7:
+            results["primary_result"] = self._classify_english(text)
+            results["sentiment"] = results["primary_result"]["sentiment"]
+            results["confidence"] = results["primary_result"]["confidence"]
+        
+        # If mixed language
+        else:
+            ko_result = self.korean_classifier.classify(text, language="ko")
+            en_result = self._classify_english(text)
+            results["primary_result"] = ko_result
+            results["fallback_result"] = en_result
+            results["merged_result"] = self._merge_multilingual(ko_result, en_result, lang_ratio)
+            results["sentiment"] = results["merged_result"]["sentiment"]
+            results["confidence"] = results["merged_result"]["confidence"]
+        
+        return results
+    
+    def _detect_language_mix(self, text: str) -> dict:
+        """Estimate Korean vs English character ratio."""
+        korean_chars = len([c for c in text if ord(c) >= 0xAC00 and ord(c) <= 0xD7AF])
+        english_chars = len([c for c in text if c.isalpha() and ord(c) < 128])
+        total = korean_chars + english_chars
+        
+        if total == 0:
+            return {"korean_ratio": 0.0, "english_ratio": 0.0, "mixed": False}
+        
+        ko_ratio = korean_chars / total
+        en_ratio = english_chars / total
+        
+        return {
+            "korean_ratio": ko_ratio,
+            "english_ratio": en_ratio,
+            "mixed": ko_ratio > 0.2 and en_ratio > 0.2
+        }
+    
+    def _classify_english(self, text: str) -> dict:
+        """Rule-based English sentiment classification."""
+        text_lower = text.lower()
+        scores = {"positive": 0, "negative": 0, "neutral": 0}
+        
+        for word in self.english_patterns["positive"]:
+            if word in text_lower:
+                scores["positive"] += 1
+        
+        for word in self.english_patterns["negative"]:
+            if word in text_lower:
+                scores["negative"] += 1
+        
+        sentiment = max(scores, key=scores.get)
+        max_score = max(scores.values()) if max(scores.values()) > 0 else 1
+        
+        return {
+            "sentiment": sentiment,
+            "scores": scores,
+            "confidence": max_score / (len(text.split()) + 1),
+            "language": "en"
+        }
+    
+    def _merge_multilingual(self, ko_result: dict, en_result: dict, lang_ratio: dict) -> dict:
+        """Merge Korean and English sentiment with weighted average.
+        
+        Args:
+            ko_result: Korean classification result
+            en_result: English classification result
+            lang_ratio: Language ratio dictionary
+        
+        Returns:
+            Merged sentiment result
+        """
+        # Weight by language composition
+        ko_weight = lang_ratio["korean_ratio"]
+        en_weight = lang_ratio["english_ratio"]
+        
+        # Convert sentiments to scores
+        sentiment_scores = {
+            "positive": 1.0,
+            "negative": -1.0,
+            "neutral": 0.0,
+            "constructive": 0.5
+        }
+        
+        ko_score = sentiment_scores.get(ko_result["sentiment"], 0.0)
+        en_score = sentiment_scores.get(en_result["sentiment"], 0.0)
+        
+        # Weighted merge
+        merged_score = (ko_score * ko_weight + en_score * en_weight) / (ko_weight + en_weight + 0.0001)
+        
+        # Map back to sentiment
+        if merged_score > 0.3:
+            merged_sentiment = "positive"
+        elif merged_score < -0.3:
+            merged_sentiment = "negative"
+        else:
+            merged_sentiment = "neutral"
+        
+        merged_confidence = max(ko_result["confidence"], en_result["confidence"])
+        
+        return {
+            "sentiment": merged_sentiment,
+            "confidence": merged_confidence,
+            "weighted_ko": ko_weight,
+            "weighted_en": en_weight,
+            "merged_score": merged_score,
+            "language_mix": "ko+en"
+        }
+```
+
+### Usage Integration
+
+```python
+# Pipeline integration example
+def process_feedback_robustly(feedback_text: str, user_id: str) -> dict:
+    """End-to-end feedback processing with all robustness layers."""
+    
+    # Layer 1: Sanitize input
+    sanitized = sanitize_feedback(feedback_text)
+    if not sanitized["is_safe"]:
+        return {"accepted": False, "reason": "unsafe_input", "issues": sanitized["issues"]}
+    
+    cleaned_text = sanitized["cleaned"]
+    
+    # Layer 2: Spam detection
+    spam_detector = SpamDetector()
+    feedback_entry = FeedbackEntry(
+        session_id="temp",
+        user_id=user_id,
+        timestamp=str(time.time()),
+        channel=FeedbackChannel.SURVEY,
+        content=cleaned_text
+    )
+    is_spam, spam_reason = spam_detector.classify(feedback_entry)
+    if is_spam:
+        return {"accepted": False, "reason": f"spam_detected:{spam_reason}"}
+    
+    # Layer 3: Sarcasm detection (Korean)
+    sarcasm_detector = SarcasmDetectorKorean()
+    sarcasm_result = sarcasm_detector.detect_sarcasm_ko(cleaned_text)
+    
+    # Layer 4: Multi-language sentiment with fallback
+    sentiment_classifier = MultiLangSentiment()
+    sentiment_result = sentiment_classifier.classify_with_fallback(cleaned_text)
+    
+    # Adjust sentiment if sarcasm detected
+    if sarcasm_result["is_sarcasm"] and sarcasm_result["suggested_sentiment"] == "inverted":
+        original_sentiment = sentiment_result["sentiment"]
+        sentiment_result["sentiment"] = "negative" if original_sentiment == "positive" else "positive"
+        sentiment_result["sarcasm_adjusted"] = True
+    
+    # Layer 5: Check for feedback cycles
+    cycle_detector = FeedbackCycleDetector()
+    dampened_adj = cycle_detector.get_dampened_adjustment("explanation_clarity", 0.1)
+    
+    return {
+        "accepted": True,
+        "cleaned_text": cleaned_text,
+        "sanitization": sanitized,
+        "sarcasm_detected": sarcasm_result["is_sarcasm"],
+        "sentiment": sentiment_result,
+        "feedback_cycle_dampening": dampened_adj,
+        "ready_for_routing": True
+    }
+```
+```
